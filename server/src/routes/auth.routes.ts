@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { authRequired } from "../middleware/auth.middleware";
 
 import {
   signup,
@@ -87,7 +88,7 @@ router.post("/login", login);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.get("/me", getMe);
+router.get("/me", authRequired, getMe);
 
 /**
  * @swagger

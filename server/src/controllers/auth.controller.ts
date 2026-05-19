@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import argon2 from "argon2";
 import { User } from "../models/User";
 import jwt from "jsonwebtoken";
+import { AuthRequest } from "../middleware/auth.middleware";
 
 const passwordRegex =
   /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/;
@@ -121,9 +122,10 @@ export const login = async (req: Request, res: Response) => {
   }
 };
 
-export const getMe = async (req: Request, res: Response) => {
+export const getMe = async (req: AuthRequest, res: Response) => {
   res.json({
-    message: "GetMe controller works",
+    message: "Protected route accessed successfully",
+    user: req.user,
   });
 };
 
