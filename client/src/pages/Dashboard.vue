@@ -2,27 +2,36 @@
     <div class="app-layout">
         <Sidebar />
 
-        <main class="app-main">
-            <div class="topbar">
+        <main class="app-main dashboard-main">
+            <header class="dashboard-topbar">
+                <AppButton variant="light">
+                    Skift til admin
+                </AppButton>
+
+                <div class="notification-button">
+                    🔔
+                </div>
+
                 <div class="user-role">
-                    <div class="user-icon">👥</div>
+                    <div class="user-icon">👤</div>
 
                     <div class="role-text">
-                        Laura
-                        <span>Partner</span>
+                        Laura P.
+                        <span>Partner VP</span>
                     </div>
                 </div>
-            </div>
+            </header>
 
-            <section class="hero-card">
-                <div>
-                    <h1 class="hero-title">
-                        Velkommen tilbage, <span>{{ companyName }}</span>
+            <section class="dashboard-hero">
+                <div class="dashboard-hero-content">
+                    <h1>
+                        Velkommen tilbage,
+                        <span>{{ companyName }}</span>
                     </h1>
 
                     <p>
                         Du er godt på vej til at blive Modulex certificeret partner.
-                       
+                        Færdiggør dine åbne moduler for at få adgang til bestillingsportalen.
                     </p>
 
                     <AppButton arrow>
@@ -30,24 +39,52 @@
                     </AppButton>
                 </div>
 
-                <div class="hero-boxes">
-                    <div class="hero-box"></div>
-                    <div class="hero-box"></div>
-                    <div class="hero-box"></div>
-                    <div class="hero-box"></div>
-                    <div class="hero-box"></div>
-                    <div class="hero-box"></div>
-                    <div class="hero-box"></div>
-                    <div class="hero-box"></div>
+                <div class="dashboard-hero-pattern">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
                 </div>
             </section>
 
-            <section class="dashboard-section">
-                <h2>Dine kurser</h2>
+            <section class="course-section">
+                <div class="course-section-header">
+                    <div class="section-title">
+                        <span class="section-icon">🎓</span>
+                        <h2>Dine kurser</h2>
+                    </div>
+
+                    <div class="course-filters">
+                        <button class="filter-button"
+                                :class="{ 'filter-button-active': activeFilter === 'all' }"
+                                @click="activeFilter = 'all'">
+                            Alle
+                        </button>
+
+                        <button class="filter-button"
+                                :class="{ 'filter-button-active': activeFilter === 'active' }"
+                                @click="activeFilter = 'active'">
+                            I gang
+                        </button>
+
+                        <button class="filter-button"
+                                :class="{ 'filter-button-active': activeFilter === 'completed' }"
+                                @click="activeFilter = 'completed'">
+                            Afsluttede
+                        </button>
+                    </div>
+                </div>
 
                 <div class="course-grid">
-                    <AppCard v-for="course in courses"
+                    <AppCard v-for="course in filteredCourses"
                              :key="course.id">
+                        <div class="course-progress-top"
+                             :style="{ width: `${course.progress}%` }"></div>
+
                         <div class="card-header">
                             <div class="icon-box">
                                 {{ course.icon }}
@@ -55,7 +92,7 @@
 
                             <span class="badge"
                                   :class="course.completed ? 'badge-success' : 'badge-muted'">
-                                {{ course.completed ? 'Fuldført' : 'Ikke gennemført' }}
+                                {{ course.completed ? 'Fuldført' : `${course.progress}% gennemført` }}
                             </span>
                         </div>
 
@@ -69,35 +106,26 @@
 
                         <div class="card-actions">
                             <AppButton variant="text" arrow>
-                                {{ course.completed ? 'Gense' : 'Start' }}
+                                {{ course.completed ? 'Gense' : course.progress > 0 ? 'Fortsæt' : 'Start' }}
                             </AppButton>
                         </div>
                     </AppCard>
                 </div>
-            </section>
-
-            <section class="dashboard-section">
-                <h2>Status over gennemførte kurser</h2>
-
-                <ProgressBar :percentage="progressPercentage" />
-
-                <p class="progress-text">
-                    <strong>{{ progressPercentage }}%</strong> gennemført
-                </p>
             </section>
         </main>
     </div>
 </template>
 
 <script setup>
-    import { computed } from 'vue'
+    import { computed, ref } from 'vue'
 
     import Sidebar from '../components/layout/Sidebar.vue'
     import AppCard from '../components/ui/AppCard.vue'
     import AppButton from '../components/ui/AppButton.vue'
-    import ProgressBar from '../components/ui/ProgressBar.vue'
 
-    const companyName = 'company_name'
+    const companyName = 'Billund Design ApS'
+
+    const activeFilter = ref('all')
 
     const courses = [
         {
@@ -105,27 +133,36 @@
             icon: '▣',
             title: 'Intro til Modulex Systemer',
             description: 'En grundlæggende gennemgang af vores skiltesystemer.',
-            completed: true
+            progress: 45,
+            completed: false
         },
         {
             id: 2,
             icon: '▤',
-            title: 'Intro til Modulex Systemer',
-            description: 'En grundlæggende gennemgang af vores produktløsninger.',
+            title: 'Konfiguration & Bestilling',
+            description: 'Lær hvordan du bruger vores online værktøjer.',
+            progress: 0,
             completed: false
         },
         {
             id: 3,
-            icon: '▻',
-            title: 'Intro til Modulex Systemer',
-            description: 'En introduktion til design og udlevering.',
-            completed: false
+            icon: '▣',
+            title: 'Brand Guidelines',
+            description: 'Sikr at din virksomhed repræsenterer Modulex korrekt.',
+            progress: 100,
+            completed: true
         }
     ]
 
-    const progressPercentage = computed(() => {
-        const completedCourses = courses.filter(course => course.completed).length
+    const filteredCourses = computed(() => {
+        if (activeFilter.value === 'completed') {
+            return courses.filter(course => course.completed)
+        }
 
-        return Math.round((completedCourses / courses.length) * 100)
+        if (activeFilter.value === 'active') {
+            return courses.filter(course => !course.completed)
+        }
+
+        return courses
     })
 </script>
