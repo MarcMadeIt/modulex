@@ -1,0 +1,61 @@
+:root {
+    /* Brand colors */
+    --color-modulex-orange: #ef4123;
+    --color-modulex-dark: #1a1a1a;
+    --color-modulex-grey: #a4a4a4;
+    --color-modulex-light: #f5f5f5;
+    /* Primary */
+    --color-primary-dark: #1a1a1a;
+    --color-primary-medium: #444a4a;
+    --color-primary-light: #d8dde3;
+    --color-primary-ultralight: #f5f5f5;
+    --color-primary-orange: #ef4123;
+    /* Secondary */
+    --color-light-orange: #fdebe8;
+    --color-dark-green: #15943a;
+    --color-light-green: #e7f5ec;
+    /* Text */
+    --color-text-primary: #1a1a1a;
+    --color-text-secondary: #8f99a6;
+    --color-text-light: #ffffff;
+    /* Background */
+    --color-bg-page: #f5f5f5;
+    --color-bg-paper: #ffffff;
+    --color-bg-dark: #111111;
+    /* Borders */
+    --color-border: #d8dde3;
+    --color-border-light: #eeeeee;
+    /* Status */
+    --color-success: #15943a;
+    --color-success-bg: #e7f5ec;
+    --color-error: #ef4123;
+    --color-error-bg: #fdebe8;
+    --color-warning: #ffb020;
+    --color-muted: #a4a4a4;
+    /* Font */
+    --font-main: Arial, Helvetica, sans-serif;
+    /* Font sizes */
+    --text-xs: 0.75rem;
+    --text-sm: 0.875rem;
+    --text-base: 1rem;
+    --text-md: 1.125rem;
+    --text-lg: 1.5rem;
+    --text-xl: 2rem;
+    /* Spacing */
+    --space-1: 0.25rem;
+    --space-2: 0.5rem;
+    --space-3: 0.75rem;
+    --space-4: 1rem;
+    --space-5: 1.5rem;
+    --space-6: 2rem;
+    --space-8: 3rem;
+    /* Radius */
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 16px;
+    /* Shadows */
+    --shadow-soft: 0 8px 24px rgba(0, 0, 0, 0.08);
+    --shadow-card: 0 12px 32px rgba(0, 0, 0, 0.12);
+    /* Layout */
+    --sidebar-width: 220px;
+}
