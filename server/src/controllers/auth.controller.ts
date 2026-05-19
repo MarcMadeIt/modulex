@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import argon2 from "argon2";
 import { User } from "../models/User";
+import jwt from "jsonwebtoken";
 
 const passwordRegex =
   /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/;
@@ -67,9 +68,57 @@ export const signup = async (req: Request, res: Response) => {
 };
 
 export const login = async (req: Request, res: Response) => {
-  res.json({
-    message: "Login controller works",
-  });
+  try {
+    const { email, password } = req.body;
+
+    // check if user exists
+    const user = await User.findOne({ email });
+
+    if (!user || !user.password) {
+      return res.status(401).json({
+        message: "Invalid email or password",
+      });
+    }
+
+    // verify password
+    const isPasswordValid = await argon2.verify(
+      user.password,
+      password,
+    );
+
+    if (!isPasswordValid) {
+      return res.status(401).json({
+        message: "Invalid email or password",
+      });
+    }
+
+    // create JWT token
+    const token = jwt.sign(
+      {
+        userId: user._id,
+        role: user.role,
+      },
+      process.env.JWT_SECRET as string,
+      {
+        expiresIn: "1h",
+      },
+    );
+
+    return res.status(200).json({
+      message: "Login successful",
+      token,
+      user: {
+        id: user._id,
+        email: user.email,
+        role: user.role,
+        status: user.status,
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: "Login failed",
+    });
+  }
 };
 
 export const getMe = async (req: Request, res: Response) => {
