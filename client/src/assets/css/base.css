@@ -1,0 +1,45 @@
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: var(--font-main);
+    background-color: var(--color-bg-page);
+    color: var(--color-text-primary);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p {
+    margin: 0;
+}
+
+h1 {
+    font-size: var(--text-xl);
+    font-weight: 800;
+}
+
+h2 {
+    font-size: var(--text-lg);
+    font-weight: 800;
+}
+
+h3 {
+    font-size: var(--text-md);
+    font-weight: 800;
+}
+
+p {
+    font-size: var(--text-sm);
+    line-height: 1.5;
+}
+
+button,
+input {
+    font-family: inherit;
+}
