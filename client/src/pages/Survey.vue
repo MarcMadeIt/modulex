@@ -39,10 +39,11 @@
               <button
                 v-for="option in currentQuestion.options"
                 :key="option"
-                class="btn btn-light btn-full"
+                class="btn btn-light btn-full survey-option"
                 @click="handleAnswer(option)"
               >
-                {{ option }}
+                <span>{{ option }}</span>
+                <span class="survey-arrow">→</span>
               </button>
             </div>
           </div>
