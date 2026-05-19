@@ -132,6 +132,28 @@ const options: swaggerJsdoc.Options = {
             error: { type: "string", example: "Quiz blev ikke fundet." },
           },
         },
+        SignupRequest: {
+          type: "object",
+          required: ["email", "password"],
+          properties: {
+            email: { type: "string", format: "email", example: "user@example.com" },
+            password: { type: "string", minLength: 6, example: "secret123" },
+          },
+        },
+        LoginRequest: {
+          type: "object",
+          required: ["email", "password"],
+          properties: {
+            email: { type: "string", format: "email", example: "user@example.com" },
+            password: { type: "string", example: "secret123" },
+          },
+        },
+        AuthResponse: {
+          type: "object",
+          properties: {
+            message: { type: "string", example: "Login successful" },
+          },
+        },
       },
     },
   },
