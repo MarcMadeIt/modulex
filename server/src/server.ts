@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import "dotenv/config";
 import swaggerUi from "swagger-ui-express";
 import { swaggerSpec } from "./config/swagger";
+import router from "./routes";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -15,6 +16,8 @@ app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.get("/", (req: Request, res: Response) => {
   res.json({ message: "Hello from Express + TS" });
 });
+
+app.use(router);
 
 // Connect to MongoDB and start server
 async function start() {
