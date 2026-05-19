@@ -21,16 +21,12 @@
         <!-- Survey -->
         <div v-else class="card">
           <!-- Progress -->
-          <div class="progress">
-            <div class="progress-fill" :style="{ width: progress + '%' }" />
-          </div>
+          <ProgressBar :percentage="progress" />
 
           <!-- Header -->
-          <div class="card-header">
-            <h1 class="card-title">Velkommen til Academy</h1>
-            <p class="card-text">
-              Svar på et par spørgsmål for at komme i gang
-            </p>
+          <div>
+            <h1>Velkommen til Academy</h1>
+            <p>Svar på et par spørgsmål for at komme i gang</p>
           </div>
 
           <!-- Question -->
@@ -58,6 +54,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
+import ProgressBar from "../components/ui/ProgressBar.vue";
 
 type Question = {
   id: string;
