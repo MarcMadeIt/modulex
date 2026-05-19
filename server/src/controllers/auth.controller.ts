@@ -9,12 +9,12 @@ const passwordRegex =
 
 export const signup = async (req: Request, res: Response) => {
   try {
-    const { email, companyName, contactPerson, phone, password } = req.body;
+    const { email, password } = req.body;
 
     // Check required fields
-    if (!email || !companyName || !contactPerson || !phone || !password) {
+    if (!email || !password) {
       return res.status(400).json({
-        message: "All fields are required",
+        message: "Email and password are required",
       });
     }
 
@@ -26,31 +26,33 @@ export const signup = async (req: Request, res: Response) => {
       });
     }
 
-    // Check if user already exists
-    const existingUser = await User.findOne({ email });
+    // Find the user that was already created by the survey flow
+    const user = await User.findOne({ email });
 
-    if (existingUser) {
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found. Please complete the survey first.",
+      });
+    }
+
+    // Prevent overwriting an existing password
+    if (user.password) {
       return res.status(409).json({
-        message: "User already exists",
+        message: "Password has already been created for this user",
       });
     }
 
     // Hash password with Argon2
     const hashedPassword = await argon2.hash(password);
 
-    // Create user
-    const user = await User.create({
-      email,
-      companyName,
-      contactPerson,
-      phone,
-      password: hashedPassword,
-      role: "client",
-      status: "pending_survey",
-    });
+    // Add password and activate user
+    user.password = hashedPassword;
+    user.status = "active";
 
-    return res.status(201).json({
-      message: "User created successfully",
+    await user.save();
+
+    return res.status(200).json({
+      message: "Password created successfully. User is now active.",
       user: {
         id: user._id,
         email: user.email,
