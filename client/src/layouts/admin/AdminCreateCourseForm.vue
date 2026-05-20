@@ -1,6 +1,8 @@
 ﻿<script setup>
     import { computed, ref } from "vue";
 
+    import { createCourse } from "../../data/dummyCourseService.js";
+
     const emit = defineEmits(["close"]);
 
     const courseTitle = ref("");
@@ -88,6 +90,41 @@
 
         return hasCourseTitle && hasValidLessons;
     });
+
+    const createNewCourse = () => {
+        if (!isFormValid.value) return;
+
+        const newCourse = {
+            title: courseTitle.value.trim(),
+            description: courseDescription.value.trim(),
+            modules: lessons.value.map((lesson) => {
+                const material =
+                    lesson.contentType === "video"
+                        ? {
+                            type: "video",
+                            title: lesson.title,
+                            url: getYoutubeEmbedUrl(lesson.youtubeUrl),
+                            duration: lesson.duration,
+                        }
+                        : {
+                            type: "pdf",
+                            title: lesson.title,
+                            fileUrl: `/files/${lesson.pdfFile.name}`,
+                            size: `${Math.round(lesson.pdfFile.size / 1024)} KB`,
+                        };
+
+                return {
+                    title: lesson.title,
+                    description: "",
+                    materials: [material],
+                };
+            }),
+        };
+
+        createCourse(newCourse);
+
+        emit("close");
+    };
 </script>
 
 <template>
@@ -114,7 +151,7 @@
                         <input v-model="courseTitle"
                                class="input"
                                type="text"
-                               placeholder="Kursus titel (f.eks. Produkter 2024)" />
+                               placeholder="Kursus titel" />
                     </div>
 
                     <div class="form-group">
@@ -125,13 +162,13 @@
                 </section>
 
                 <section class="form-section">
-                    <h2 class="form-section-title">Lektioner</h2>
+                    <h2 class="form-section-title">Lektioner / trin</h2>
 
                     <article v-for="lesson in lessons"
                              :key="lesson.id"
                              class="lesson-card">
                         <div class="form-group">
-                            <label class="input-label">Titel på lektion</label>
+                            <label class="input-label">Titel på trin</label>
 
                             <input v-model="lesson.title"
                                    class="input"
@@ -213,7 +250,7 @@
                                 class="btn btn-text"
                                 type="button"
                                 @click="removeLesson(lesson.id)">
-                            Fjern lektion
+                            Fjern trin
                         </button>
                     </article>
 
@@ -234,7 +271,8 @@
 
                 <button class="btn btn-primary"
                         type="button"
-                        :disabled="!isFormValid">
+                        :disabled="!isFormValid"
+                        @click="createNewCourse">
                     Opret kursus nu
                 </button>
             </footer>
