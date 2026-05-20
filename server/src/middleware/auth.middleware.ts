@@ -10,6 +10,17 @@ export interface AuthRequest extends Request {
   user?: JwtPayload;
 }
 
+export const adminOnly = (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) => {
+  if (req.user?.role !== "admin") {
+    return res.status(403).json({ message: "Forbidden" });
+  }
+  next();
+};
+
 export const authRequired = (
   req: AuthRequest,
   res: Response,
@@ -17,10 +28,12 @@ export const authRequired = (
 ) => {
   const authHeader = req.headers.authorization;
 
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return res.status(401).json({
-      message: "No token provided",
-    });
+  if (!authHeader) {
+    return res.status(401).json({ message: "No token provided" });
+  }
+
+  if (!authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ message: "Invalid token format" });
   }
 
   const token = authHeader.split(" ")[1];

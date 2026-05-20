@@ -1,72 +1,72 @@
 import { Router } from "express";
-import {
-  submitSurvey,
-  getResponseByUser,
-} from "../controllers/survey.controller";
 import { authRequired, adminOnly } from "../middleware/auth.middleware";
+import { getCustomers, getCustomerById } from "../controllers/admin.controller";
 
 const router: Router = Router();
 
-/**
- * @swagger
- * /survey:
- *   post:
- *     summary: Submit a survey and register a new company user
- *     tags: [Survey]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/SurveySubmitRequest'
- *     responses:
- *       201:
- *         description: Survey submitted successfully, user created with pending_approval status
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/SurveySubmitResponse'
- *       409:
- *         description: Email is already registered
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- *       500:
- *         description: Internal server error
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- */
-router.post("/", submitSurvey);
+router.use(authRequired, adminOnly);
 
 /**
  * @swagger
- * /survey/{userId}:
+ * /admin/customers:
  *   get:
- *     summary: Get survey response for a specific user (admin only)
- *     tags: [Survey]
+ *     summary: Get all customers
+ *     tags: [Admin]
  *     security:
  *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: userId
- *         required: true
- *         schema:
- *           type: string
- *         description: The MongoDB ObjectId of the user
- *         example: 664f1c2e8b1a2c3d4e5f6a7b
  *     responses:
  *       200:
- *         description: Survey response found
+ *         description: List of all customers
  *         content:
  *           application/json:
  *             schema:
  *               type: object
  *               properties:
- *                 response:
- *                   $ref: '#/components/schemas/SurveyResponseObject'
+ *                 users:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/CustomerResponse'
+ *       401:
+ *         description: Not authenticated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       403:
+ *         description: Forbidden - admin role required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ */
+router.get("/customers", getCustomers);
+
+/**
+ * @swagger
+ * /admin/customers/{id}:
+ *   get:
+ *     summary: Get a customer by ID
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The MongoDB ObjectId of the customer
+ *         example: 664f1c2e8b1a2c3d4e5f6a7b
+ *     responses:
+ *       200:
+ *         description: Customer found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 user:
+ *                   $ref: '#/components/schemas/CustomerResponse'
  *       401:
  *         description: Not authenticated
  *         content:
@@ -80,18 +80,12 @@ router.post("/", submitSurvey);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  *       404:
- *         description: No survey response found for this user
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- *       500:
- *         description: Internal server error
+ *         description: Customer not found
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.get("/:userId", authRequired, adminOnly, getResponseByUser);
+router.get("/customers/:id", getCustomerById);
 
 export default router;
