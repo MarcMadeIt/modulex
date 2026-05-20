@@ -3,6 +3,8 @@
     <!-- HERO -->
     <section class="dashboard-hero">
       <div class="dashboard-hero-content">
+
+
         <h1>
           Velkommen tilbage,
           <span>{{ companyName }}</span>
