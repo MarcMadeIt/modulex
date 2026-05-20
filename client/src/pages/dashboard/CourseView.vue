@@ -1,14 +1,12 @@
-//TODO: `/courses/${id}` skal ændres til rigtig endpoint når backend er klar
-
 <template>
   <div class="course-view">
     <!-- Header -->
     <div class="course-header">
       <button @click="exitCourse" class="btn btn-light">← Forlad</button>
 
-      <div class="course-meta">
-        {{ course?.title }} • Trin {{ currentIndex + 1 }} af
-        {{ course?.items?.length }}
+      <div class="course-meta" v-if="course">
+        {{ course.title }} • Trin {{ currentIndex + 1 }} af
+        {{ course.items.length }}
       </div>
     </div>
 
@@ -18,55 +16,64 @@
     </div>
 
     <!-- Course content -->
-    <div v-else-if="currentStep" class="card">
-      <!-- Step info -->
-      <div class="step-header">
-        <div class="step-type">
-          {{ currentStep.type }}
+    <div v-else-if="currentStep" class="course-card">
+      <div class="course-progress">
+        <div
+          class="course-progress-fill"
+          :style="{ width: progress + '%' }"
+        ></div>
+      </div>
+
+      <div class="course-content">
+        <div class="step-header">
+          <div class="step-type">
+            {{ currentStep.type }}
+          </div>
+
+          <h2>{{ currentStep.title }}</h2>
+
+          <p>
+            Gennemgå materialet herunder. Når du er klar, skal du bekræfte
+            nederst på siden for at gå videre.
+          </p>
         </div>
-        <h2>{{ currentStep.title }}</h2>
-        <p>Gennemgå materialet før du fortsætter</p>
-      </div>
 
-      <!-- Content placeholder -->
-      <div class="content-box">
-        <p>{{ currentStep.type }} content: {{ currentStep.title }}</p>
-      </div>
+        <div class="content-box">
+          <div class="content-placeholder-icon">▤</div>
+          <p>{{ currentStep.title }}</p>
+        </div>
 
-      <!-- Confirm -->
-      <div class="confirm-box">
-        <label class="confirm-box">
+        <label class="confirm-box" :class="{ 'confirm-box-active': confirmed }">
           <input type="checkbox" v-model="confirmed" />
-          <span class="input-label"
-            >Jeg bekræfter at have gennemgået indholdet</span
-          >
+          <span>Jeg bekræfter at have set indholdet</span>
         </label>
-      </div>
 
-      <!-- Navigation -->
-      <div class="card-nav">
-        <button
-          class="btn btn-light"
-          @click="prevStep"
-          :disabled="currentIndex === 0"
-        >
-          ← Forrige
-        </button>
+        <div class="course-nav">
+          <button
+            class="course-nav-back"
+            @click="prevStep"
+            :disabled="currentIndex === 0"
+          >
+            ← Forrige
+          </button>
 
-        <button
-          class="btn btn-primary"
-          @click="nextStep"
-          :disabled="!confirmed"
-        >
-          {{ isLastStep ? "Afslut kursus" : "Næste" }}
-        </button>
+          <button
+            class="course-nav-next"
+            @click="nextStep"
+            :disabled="!confirmed"
+          >
+            {{ isLastStep ? "Afslut kursus" : "Næste trin" }} →
+          </button>
+        </div>
       </div>
     </div>
 
-    <!-- Completed -->
-    <div v-else class="card">
-      <h2 class="card-title">Kursus færdigt 🎉</h2>
-      <p class="card-text">Du har gennemført hele kurset.</p>
+    <!-- Completed / fallback -->
+    <div v-else class="course-card">
+      <div class="course-content">
+        <h2>Kursus færdigt 🎉</h2>
+        <p>Du har gennemført hele kurset.</p>
+      </div>
     </div>
   </div>
 </template>
@@ -153,162 +160,173 @@ function exitCourse() {
 
 <style scoped>
 .course-view {
-  max-width: 900px;
+  max-width: 980px;
   margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-5);
 }
 
-/* =========================
-   HEADER
-========================= */
 .course-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: var(--space-3);
+  margin-bottom: var(--space-4);
 }
 
-.course-header button {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  font-size: var(--text-xs);
-  font-weight: 800;
+.course-header .btn {
+  background: transparent;
+  box-shadow: none;
+  border: none;
   color: var(--color-text-secondary);
-  background: var(--color-bg-paper);
-  border: 1px solid var(--color-border);
-  padding: 0.6rem 1rem;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  box-shadow: var(--shadow-soft);
-  transition: 0.2s ease;
-}
-
-.course-header button:hover {
-  transform: translateY(-1px);
-  color: var(--color-text-primary);
+  font-weight: 800;
 }
 
 .course-meta {
   font-size: var(--text-xs);
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  font-weight: 900;
   color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
 }
 
-/* =========================
-   MAIN CARD OVERRIDE
-========================= */
-.course-view .card {
-  padding: 0;
+.course-card {
+  background: var(--color-bg-paper);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
   overflow: hidden;
 }
 
-/* =========================
-   CONTENT AREA
-========================= */
+.course-progress {
+  width: 100%;
+  height: 5px;
+  background: var(--color-primary-ultralight);
+}
+
+.course-progress-fill {
+  height: 100%;
+  background: var(--color-primary-orange);
+  transition: width 0.4s ease;
+}
+
 .course-content {
-  padding: var(--space-6);
+  padding: var(--space-8);
 }
 
-/* STEP HEADER */
 .step-header {
-  margin-bottom: var(--space-5);
+  margin-bottom: var(--space-6);
 }
 
-.step-header h2 {
-  font-size: var(--text-lg);
-  font-weight: 900;
-  color: var(--color-text-primary);
-  margin-bottom: var(--space-2);
-}
-
-.step-header p {
-  font-size: var(--text-sm);
-  color: var(--color-text-secondary);
-  line-height: 1.6;
-}
-
-/* TYPE BADGE (video/pdf/quiz) */
 .step-type {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  font-size: var(--text-xs);
-  font-weight: 800;
-  text-transform: uppercase;
   color: var(--color-primary-orange);
+  font-size: var(--text-xs);
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
   margin-bottom: var(--space-3);
 }
 
-/* =========================
-   CONTENT PLACEHOLDER
-========================= */
+.step-header h2 {
+  font-size: 1.9rem;
+  font-weight: 900;
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-3);
+}
+
+.step-header p {
+  max-width: 760px;
+  font-size: var(--text-md);
+  line-height: 1.6;
+  color: var(--color-primary-medium);
+}
+
 .content-box {
-  height: 320px;
-  border-radius: var(--radius-md);
-  border: 1px dashed var(--color-border);
+  aspect-ratio: 16 / 9;
   background: var(--color-primary-ultralight);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-6);
+  color: var(--color-muted);
+  font-weight: 800;
+}
+
+.content-placeholder-icon {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: var(--color-bg-paper);
+  box-shadow: var(--shadow-soft);
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: var(--space-6);
-  color: var(--color-text-secondary);
-  font-size: var(--text-sm);
+  color: var(--color-border);
+  font-size: 1.5rem;
 }
 
-/* =========================
-   CONFIRM BOX
-========================= */
 .confirm-box {
-  margin-bottom: var(--space-6);
-  padding: var(--space-4);
-  border-radius: var(--radius-md);
-  background: var(--color-bg-paper);
-  border: 1px solid var(--color-border);
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-4);
+  width: 100%;
+  padding: 1.35rem 1.5rem;
+  margin-bottom: var(--space-8);
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(239, 65, 35, 0.22);
+  background: rgba(239, 65, 35, 0.05);
+  cursor: pointer;
 }
 
 .confirm-box input {
-  width: 18px;
-  height: 18px;
+  width: 24px;
+  height: 24px;
   accent-color: var(--color-primary-orange);
+  cursor: pointer;
 }
 
-/* =========================
-   NAVIGATION
-========================= */
+.confirm-box span {
+  font-size: var(--text-md);
+  font-weight: 900;
+  color: var(--color-text-primary);
+}
+
 .course-nav {
-  display: flex;
-  justify-content: space-between;
-  padding-top: var(--space-5);
   border-top: 1px solid var(--color-border-light);
+  padding-top: var(--space-6);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
-/* override buttons so they feel like modulex */
-.course-nav .btn {
-  min-width: 140px;
-}
-
-/* disabled state override for consistency */
-.btn:disabled {
-  opacity: 0.4;
-  pointer-events: none;
-}
-
-/* =========================
-   ANIMATIONS (small polish)
-========================= */
-.course-view button {
+.course-nav-back,
+.course-nav-next {
+  border: none;
+  border-radius: var(--radius-md);
+  font-weight: 900;
+  cursor: pointer;
   transition: 0.2s ease;
 }
 
-.course-view button:active {
-  transform: scale(0.98);
+.course-nav-back {
+  background: transparent;
+  color: var(--color-primary-medium);
+  font-size: var(--text-md);
+}
+
+.course-nav-next {
+  padding: 1rem 1.5rem;
+  background: var(--color-primary-orange);
+  color: var(--color-text-light);
+  font-size: var(--text-sm);
+  box-shadow: var(--shadow-soft);
+}
+
+.course-nav-next:disabled,
+.course-nav-back:disabled {
+  background: var(--color-primary-ultralight);
+  color: var(--color-primary-light);
+  cursor: not-allowed;
+  box-shadow: none;
 }
 </style>
