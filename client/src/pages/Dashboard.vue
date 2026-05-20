@@ -74,7 +74,7 @@
 
                     <div class="card-header">
                         <div class="icon-box">
-                            {{ course.icon }}
+                            {{ course.icon }}c
                         </div>
 
                         <span class="badge"

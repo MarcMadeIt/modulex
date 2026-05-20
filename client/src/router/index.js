@@ -19,13 +19,19 @@ const routes = [
         path: "",
         name: "DashboardHome",
         component: () => import("../pages/dashboard/DashboardHome.vue"),
-        },
+      },
 
-        {
-            path: "/dashboardtest",
-            name: "Dashboardtest",
-            component: () => import("../pages/Dashboard.vue"),
-        },
+      {
+        path: "admin",
+        name: "Admin",
+        component: () => import("../pages/Admin.vue"),
+      },
+
+      {
+        path: "/dashboardtest",
+        name: "Dashboardtest",
+        component: () => import("../pages/Dashboard.vue"),
+      },
 
       {
         path: "course/:id",
@@ -40,11 +46,7 @@ const routes = [
     name: "Survey",
     component: () => import("../pages/survey/Survey.vue"),
   },
-  {
-    path: "/admin",
-    name: "Admin",
-    component: () => import("../pages/Admin.vue"),
-  },
+
 ];
 
 const router = createRouter({
