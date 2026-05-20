@@ -50,6 +50,17 @@ router.post("/signup", signup);
  *         application/json:
  *           schema:
  *             $ref: '#/components/schemas/LoginRequest'
+ *           examples:
+ *             admin:
+ *               summary: Admin account
+ *               value:
+ *                 email: admin@example.com
+ *                 password: Secret123!
+ *             client:
+ *               summary: Client account
+ *               value:
+ *                 email: user@example.com
+ *                 password: Secret123!
  *     responses:
  *       200:
  *         description: Login successful

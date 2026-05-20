@@ -7,7 +7,13 @@ const options: swaggerJsdoc.Options = {
     info: {
       title: "Quiz Platform API",
       version: "1.0.0",
-      description: "API documentation for the quiz backend",
+      description:
+        "API documentation for the quiz backend.\n\n" +
+        "**Test accounts** (password for both: `Secret123!`)\n\n" +
+        "| Role | Email |\n|---|---|\n" +
+        "| Admin | admin@example.com |\n" +
+        "| Client | user@example.com |\n\n" +
+        "Log in via `POST /auth/login`, copy the token, click **Authorize** at the top and paste it.",
     },
     servers: [
       {
@@ -20,7 +26,7 @@ const options: swaggerJsdoc.Options = {
         bearerAuth: {
           type: "http",
           scheme: "bearer",
-          bearerFormat: "UUID",
+          bearerFormat: "JWT",
         },
       },
       schemas: {
@@ -130,6 +136,177 @@ const options: swaggerJsdoc.Options = {
                 ],
               },
             },
+          },
+        },
+        Course: {
+          type: "object",
+          properties: {
+            _id: { type: "string", example: "664f1c2e8b1a2c3d4e5f6a7b" },
+            title: { type: "string", example: "Welcome to Modulex Billund Academy" },
+            description: {
+              type: "string",
+              example:
+                "Your introduction to Modulex — our history, design philosophy, and the modular systems that help organisations navigate their world.",
+            },
+            createdAt: { type: "string", format: "date-time" },
+            updatedAt: { type: "string", format: "date-time" },
+          },
+        },
+        CourseWithProgress: {
+          type: "object",
+          properties: {
+            _id: { type: "string", example: "664f1c2e8b1a2c3d4e5f6a7b" },
+            title: { type: "string", example: "Welcome to Modulex Billund Academy" },
+            description: {
+              type: "string",
+              example:
+                "Your introduction to Modulex — our history, design philosophy, and the modular systems that help organisations navigate their world.",
+            },
+            totalModules: { type: "number", example: 4 },
+            completedModules: { type: "number", example: 1 },
+            progressPct: { type: "number", example: 25 },
+          },
+        },
+        CourseProgress: {
+          type: "object",
+          properties: {
+            completed: { type: "number", example: 1 },
+            total: { type: "number", example: 4 },
+            percentage: { type: "number", example: 25 },
+          },
+        },
+        Material: {
+          type: "object",
+          properties: {
+            type: { type: "string", enum: ["youtube", "pdf", "text"], example: "youtube" },
+            title: { type: "string", example: "The Story of Modulex" },
+            url: {
+              type: "string",
+              example: "https://www.youtube.com/embed/modulex-intro",
+            },
+            content: {
+              type: "string",
+              example:
+                "Founded in 1963 as part of the LEGO Group, Modulex grew from a shared belief that well-designed environments help people feel oriented, informed, and at ease.",
+            },
+          },
+        },
+        ModuleListItem: {
+          type: "object",
+          properties: {
+            _id: { type: "string", example: "664f1c2e8b1a2c3d4e5f6a7c" },
+            title: { type: "string", example: "Our History & Heritage" },
+            description: {
+              type: "string",
+              example:
+                "From the LEGO Group's vision in 1963 to a global leader in architectural signage and wayfinding.",
+            },
+            order: { type: "number", example: 1 },
+            materialsCount: { type: "number", example: 3 },
+          },
+        },
+        ModuleDetail: {
+          type: "object",
+          properties: {
+            _id: { type: "string", example: "664f1c2e8b1a2c3d4e5f6a7c" },
+            title: { type: "string", example: "Our History & Heritage" },
+            description: {
+              type: "string",
+              example:
+                "From the LEGO Group's vision in 1963 to a global leader in architectural signage and wayfinding.",
+            },
+            order: { type: "number", example: 1 },
+            materials: {
+              type: "array",
+              items: { $ref: "#/components/schemas/Material" },
+            },
+          },
+        },
+        CreateCourseRequest: {
+          type: "object",
+          required: ["title", "description"],
+          properties: {
+            title: { type: "string", example: "Wayfinding & Signage Systems" },
+            description: {
+              type: "string",
+              example:
+                "A practical introduction to Modulex product families and how they solve navigation challenges in hospitals, airports, universities, and corporate campuses.",
+            },
+          },
+        },
+        UpdateCourseRequest: {
+          type: "object",
+          properties: {
+            title: { type: "string", example: "Wayfinding & Signage Systems" },
+            description: {
+              type: "string",
+              example:
+                "A practical introduction to Modulex product families and how they solve navigation challenges in hospitals, airports, universities, and corporate campuses.",
+            },
+          },
+        },
+        CreateModuleRequest: {
+          type: "object",
+          required: ["title", "order"],
+          properties: {
+            title: { type: "string", example: "The Modulex Design Philosophy" },
+            description: {
+              type: "string",
+              example:
+                "How modularity, precision, and Scandinavian functional design come together in every product we make.",
+            },
+            order: { type: "number", example: 2 },
+            materials: {
+              type: "array",
+              items: { $ref: "#/components/schemas/Material" },
+              example: [
+                {
+                  type: "pdf",
+                  title: "Modulex Design Principles",
+                  url: "https://academy.modulex.com/materials/design-principles.pdf",
+                },
+                {
+                  type: "text",
+                  title: "Why Modularity Matters",
+                  content:
+                    "Modular systems allow clients to adapt their signage environments over time without starting from scratch — a core principle since our founding.",
+                },
+              ],
+            },
+          },
+        },
+        UpdateModuleRequest: {
+          type: "object",
+          properties: {
+            title: { type: "string", example: "The Modulex Design Philosophy" },
+            description: {
+              type: "string",
+              example:
+                "How modularity, precision, and Scandinavian functional design come together in every product we make.",
+            },
+            order: { type: "number", example: 2 },
+            materials: {
+              type: "array",
+              items: { $ref: "#/components/schemas/Material" },
+            },
+          },
+        },
+        AssignCourseRequest: {
+          type: "object",
+          required: ["userId", "courseId"],
+          properties: {
+            userId: { type: "string", example: "664f1c2e8b1a2c3d4e5f6a7b" },
+            courseId: { type: "string", example: "664f1c2e8b1a2c3d4e5f6a7c" },
+          },
+        },
+        CourseGrant: {
+          type: "object",
+          properties: {
+            _id: { type: "string", example: "664f1c2e8b1a2c3d4e5f6a7d" },
+            userId: { type: "string", example: "664f1c2e8b1a2c3d4e5f6a7b" },
+            courseId: { type: "string", example: "664f1c2e8b1a2c3d4e5f6a7c" },
+            grantedBy: { type: "string", example: "664f1c2e8b1a2c3d4e5f6a7a" },
+            grantedAt: { type: "string", format: "date-time" },
           },
         },
         CustomerResponse: {
