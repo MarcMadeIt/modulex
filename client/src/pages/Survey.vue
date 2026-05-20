@@ -14,8 +14,12 @@
 
         <!-- Completed -->
         <div v-else-if="completed" class="card">
-          <h2 class="card-title">Tak for dine svar</h2>
-          <p class="card-text">Du er færdig med surveyet.</p>
+          <h1 class="card-title">Tak for dine svar</h1>
+          <p class="card-text">
+            Dine svar er blevet sendt til Modulex' kundesupport. Når dit
+            personlige onboarding flow er sat sammen vil du modtage en email
+            invitiation.
+          </p>
         </div>
 
         <!-- Survey -->
