@@ -2,9 +2,13 @@
 
 <template>
   <header class="dashboard-topbar">
-    <AppButton variant="light" @click="$emit('switch-mode')">
-      Skift til admin
-    </AppButton>
+    <AppButton
+  v-if="route.path !== '/dashboard/admin'"
+  variant="light"
+  @click="$emit('switch-mode')"
+>
+  Skift til admin
+</AppButton>
 
     <div class="notification-button">🔔</div>
 
@@ -20,8 +24,10 @@
 </template>
 
 <script setup>
+import { useRoute } from "vue-router";
 import AppButton from "../ui/AppButton.vue";
 
+const route = useRoute();
 defineProps({
   userName: {
     type: String,
