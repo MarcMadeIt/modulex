@@ -90,7 +90,7 @@ const errorMessage = ref('')
 
 const hasLength = computed(() => password.value.length >= 8)
 const hasUpper = computed(() => /[A-ZÆØÅ]/.test(password.value))
-const hasNumber = computed(() => /[0-9]/.test(password.value))
+  const hasNumber = computed(() => /\d/.test(password.value))
 const hasSpecial = computed(() => /[^A-Za-z0-9ÆØÅæøå]/.test(password.value))
 
 const isPasswordSecure = computed(() => 
