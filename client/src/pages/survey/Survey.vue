@@ -282,7 +282,11 @@ async function handleAnswer(option: string) {
 
 async function submitSurvey() {
   try {
+<<<<<<< Updated upstream
       await fetch(`${API_URL}/survey`, {   
+=======
+    await fetch("/localh/survey", {
+>>>>>>> Stashed changes
       method: "POST",
       headers: {
         "Content-Type": "application/json",
