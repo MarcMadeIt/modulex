@@ -33,6 +33,7 @@ export const dummyModules = [
         title: "Velkommen til Modulex",
         description: "En kort videointroduktion til Modulex og partnerprogrammet.",
         order: 1,
+        duration: "8 min",
         materials: [
             {
                 type: "video",
@@ -50,6 +51,7 @@ export const dummyModules = [
         title: "Hvad er Modulex?",
         description: "Gennemgang af Modulex som brand, virksomhed og partnernetværk.",
         order: 2,
+        duration: "6 min",
         materials: [
             {
                 type: "pdf",
@@ -67,6 +69,7 @@ export const dummyModules = [
         title: "Partnerportalens opbygning",
         description: "Lær hvordan partnerportalen er opbygget, og hvor du finder de vigtigste funktioner.",
         order: 3,
+        duration: "10 min",
         materials: [
             {
                 type: "video",
@@ -84,6 +87,7 @@ export const dummyModules = [
         title: "Afslutning og næste skridt",
         description: "Opsamling på introduktionskurset og hvad du skal gøre bagefter.",
         order: 4,
+        duration: "5 min",
         materials: [
             {
                 type: "pdf",
@@ -103,6 +107,7 @@ export const dummyModules = [
         title: "Sådan bruger du bestillingsportalen",
         description: "PDF-guide til opsætning og bestilling af produkter.",
         order: 1,
+        duration: "7 min",
         materials: [
             {
                 type: "pdf",
@@ -120,6 +125,7 @@ export const dummyModules = [
         title: "Opret en produktkonfiguration",
         description: "Lær hvordan du vælger produkter og opsætter en konfiguration.",
         order: 2,
+        duration: "14 min",
         materials: [
             {
                 type: "video",
@@ -137,6 +143,7 @@ export const dummyModules = [
         title: "Tilpasning af materialer og farver",
         description: "Gennemgang af valg af materialer, farver og visuelle indstillinger.",
         order: 3,
+        duration: "11 min",
         materials: [
             {
                 type: "video",
@@ -154,6 +161,7 @@ export const dummyModules = [
         title: "Send bestilling til Modulex",
         description: "Lær hvordan du kontrollerer og sender en færdig bestilling.",
         order: 4,
+        duration: "6 min",
         materials: [
             {
                 type: "pdf",
@@ -171,6 +179,7 @@ export const dummyModules = [
         title: "Typiske fejl i bestillingsflowet",
         description: "Se de mest almindelige fejl og hvordan du undgår dem.",
         order: 5,
+        duration: "9 min",
         materials: [
             {
                 type: "video",
@@ -190,6 +199,7 @@ export const dummyModules = [
         title: "Brand og visuel identitet",
         description: "Video om brug af Modulex-logo, farver og tone of voice.",
         order: 1,
+        duration: "12 min",
         materials: [
             {
                 type: "video",
@@ -207,6 +217,7 @@ export const dummyModules = [
         title: "Logo og korrekt brug",
         description: "Gennemgang af hvordan Modulex-logoet må bruges i materialer.",
         order: 2,
+        duration: "6 min",
         materials: [
             {
                 type: "pdf",
@@ -224,6 +235,7 @@ export const dummyModules = [
         title: "Farver og typografi",
         description: "Introduktion til Modulex farver, typografi og grafiske principper.",
         order: 3,
+        duration: "7 min",
         materials: [
             {
                 type: "pdf",
