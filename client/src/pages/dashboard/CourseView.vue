@@ -2,7 +2,10 @@
   <div class="course-view">
     <!-- Header -->
     <div class="course-header">
-      <button @click="exitCourse" class="btn btn-light">← Forlad</button>
+      <button @click="exitCourse" class="btn btn-light">
+        <ArrowLeft :size="18" />
+        <span>Tilbage til dashboard</span>
+      </button>
 
       <div class="course-meta" v-if="course">
         {{ course.title }} • Trin {{ currentIndex + 1 }} af
@@ -27,7 +30,10 @@
       <div class="course-content">
         <div class="step-header">
           <div class="step-type">
-            {{ currentStep.type }}
+            <PlayCircle v-if="currentStep.type === 'video'" :size="18" />
+
+            <FileText v-else-if="currentStep.type === 'pdf'" :size="18" />
+            <span> {{ currentStep.type }}</span>
           </div>
 
           <h2>{{ currentStep.title }}</h2>
@@ -75,7 +81,8 @@
             @click="prevStep"
             :disabled="currentIndex === 0"
           >
-            ← Forrige
+            <ArrowLeft :size="18" />
+            <span>Forrige</span>
           </button>
 
           <button
@@ -83,7 +90,10 @@
             @click="nextStep"
             :disabled="!confirmed"
           >
-            {{ isLastStep ? "Afslut kursus" : "Næste trin" }} →
+            <span>
+              {{ isLastStep ? "Afslut kursus" : "Næste trin" }}
+              <ArrowRight :size="18" />
+            </span>
           </button>
         </div>
       </div>
@@ -111,6 +121,8 @@ import {
   getCourseById,
   completeCourse,
 } from "../../data/dummyCourseService.js";
+
+import { PlayCircle, FileText, ArrowLeft, ArrowRight } from "lucide-vue-next";
 
 const route = useRoute();
 const router = useRouter();
@@ -140,6 +152,7 @@ onMounted(() => {
   const id = route.params.id;
 
   const foundCourse = getCourseById(id);
+  console.log("Found course:", foundCourse);
 
   if (!foundCourse) {
     course.value = {
@@ -268,6 +281,10 @@ function exitCourse() {
 }
 
 .step-type {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+
   color: var(--color-primary-orange);
   font-size: var(--text-xs);
   font-weight: 900;
@@ -335,6 +352,9 @@ function exitCourse() {
   border: 1px solid rgba(239, 65, 35, 0.22);
   background: rgba(239, 65, 35, 0.05);
   cursor: pointer;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease;
 }
 
 .confirm-box input {
@@ -350,23 +370,51 @@ function exitCourse() {
   color: var(--color-text-primary);
 }
 
+.confirm-box-active {
+  background: rgba(21, 148, 58, 0.06);
+  border-color: rgba(21, 148, 58, 0.25);
+}
+
+.confirm-box-active input {
+  accent-color: var(--color-success);
+}
+
 .course-nav {
-  border-top: 1px solid var(--color-border-light);
-  padding-top: var(--space-6);
   display: flex;
   align-items: center;
   justify-content: space-between;
+
+  border-top: 1px solid var(--color-border-light);
+  padding-top: var(--space-6);
+  margin-top: var(--space-6);
 }
 
 .course-nav-back,
 .course-nav-next {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7rem;
+
+  background: transparent;
   border: none;
-  border-radius: var(--radius-md);
-  font-weight: 900;
+
+  color: var(--color-text-primary);
+
+  font-size: var(--text-md);
+  font-weight: 700;
+
   cursor: pointer;
-  transition: 0.2s ease;
+  transition: all 0.2s ease;
 }
 
+.course-nav-back:hover:not(:disabled) {
+  opacity: 0.7;
+}
+
+.course-nav-back:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
 .course-nav-back {
   background: transparent;
   color: var(--color-primary-medium);
@@ -374,19 +422,43 @@ function exitCourse() {
 }
 
 .course-nav-next {
-  padding: 1rem 1.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.7rem;
+
   background: var(--color-primary-orange);
-  color: var(--color-text-light);
-  font-size: var(--text-sm);
-  box-shadow: var(--shadow-soft);
+  color: white;
+
+  border: none;
+  border-radius: var(--radius-md);
+
+  padding: 1rem 1.4rem;
+
+  font-size: var(--text-md);
+  font-weight: 800;
+
+  cursor: pointer;
+
+  transition:
+    transform 0.2s ease,
+    opacity 0.2s ease,
+    background 0.2s ease;
 }
 
-.course-nav-next:disabled,
-.course-nav-back:disabled {
-  background: var(--color-primary-ultralight);
-  color: var(--color-primary-light);
+.course-nav-next svg {
+  position: relative;
+  top: 3px;
+}
+
+.course-nav-next:hover:not(:disabled) {
+  transform: translateY(-2px);
+}
+
+.course-nav-next:disabled {
+  background: #f1f1f1;
+  color: #b8b8b8;
   cursor: not-allowed;
-  box-shadow: none;
 }
 
 .step-duration {

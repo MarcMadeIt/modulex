@@ -27,7 +27,7 @@
 </template>
 
 <script setup>
-import { LogOut } from "../../assets/icons/index.js";
+import { LogOut } from "lucide-vue-next";
 
 const navItems = [
   {

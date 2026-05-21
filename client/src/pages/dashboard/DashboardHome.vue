@@ -76,7 +76,7 @@
 
           <div class="card-header">
             <div class="icon-box">
-              {{ course.icon }}
+              <BookOpen />
             </div>
 
             <span
@@ -131,6 +131,14 @@ import {
   dummyModules,
   dummyUserProgresses,
 } from "../../data/dummyData.js";
+
+import {
+  BookOpen,
+  Clock3,
+  CircleCheck,
+  GraduationCap,
+  Book,
+} from "lucide-vue-next";
 
 const router = useRouter();
 
