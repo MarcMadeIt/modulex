@@ -141,6 +141,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
 import ProgressBar from "../../components/ui/ProgressBar.vue";
+import { dummyQuestions } from "../../data/surveyQuestions";
 const API_URL = import.meta.env.VITE_API_URL;
 
 type SurveyOption = {
@@ -181,86 +182,10 @@ onMounted(() => {
   fetchQuestions();
 });
 
-async function fetchQuestions() {
-  try {
-    loading.value = true;
-    error.value = null;
-
-    const res = await fetch("/survey/questions");
-
-    if (!res.ok) {
-      throw new Error("API ikke klar");
-    }
-
-    const data = await res.json();
-    questions.value = data;
-  } catch (err) {
-    console.warn("Bruger dummy data (API ikke klar)");
-
-    // 👇 DUMMY DATA FALLBACK
-    questions.value = [
-      {
-        id: "business_type",
-        question: "Hvilken type virksomhed driver I?",
-        type: "single",
-        options: [
-          { value: "sign_maker", label: "Skiltemager" },
-          { value: "reseller", label: "Forhandler" },
-          { value: "agency", label: "Bureau" },
-          { value: "other", label: "Andet" },
-        ],
-      },
-      {
-        id: "company_size",
-        question: "Hvor mange medarbejdere er I?",
-        type: "single",
-        options: [
-          { value: "1-5", label: "1-5" },
-          { value: "6-20", label: "6-20" },
-          { value: "21-50", label: "21-50" },
-          { value: "50+", label: "50+" },
-        ],
-      },
-
-      {
-        id: "product_interest",
-        question: "Hvilke produktområder er I interesserede i?",
-        type: "multi",
-        options: [
-          { value: "interior", label: "Interior signs" },
-          { value: "exterior", label: "Exterior signs" },
-          { value: "safety", label: "Safety signs" },
-          { value: "wayfinding", label: "Wayfinding systems" },
-        ],
-      },
-
-      {
-        id: "experience_level",
-        question: "Hvor meget erfaring har I med modulære skiltesystemer?",
-        type: "single",
-        options: [
-          { value: "none", label: "Ingen" },
-          { value: "some", label: "Lidt" },
-          { value: "experienced", label: "Erfaren" },
-        ],
-      },
-
-      {
-        id: "expected_volume",
-        question: "Forventet årligt salgsvolumen?",
-        type: "single",
-        options: [
-          { value: "small", label: "Under 100k EUR" },
-          { value: "medium", label: "100k - 500k EUR" },
-          { value: "large", label: "Over 500k EUR" },
-        ],
-      },
-    ];
-
-    error.value = null;
-  } finally {
-    loading.value = false;
-  }
+function fetchQuestions() {
+  loading.value = true;
+  questions.value = dummyQuestions;
+  loading.value = false;
 }
 
 async function handleAnswer(option: string) {
@@ -272,7 +197,6 @@ async function handleAnswer(option: string) {
   const isLast = step.value === questions.value.length - 1;
 
   if (isLast) {
-    await submitSurvey();
     completed.value = true;
     return;
   }
@@ -280,16 +204,31 @@ async function handleAnswer(option: string) {
   step.value++;
 }
 
-async function submitSurvey() {
+async function handleContactSubmit() {
+  contactError.value = null;
+
   try {
-    await fetch("/localh/survey", {
+    const response = await fetch(`${API_URL}/survey`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ answers: answers.value }),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: contactForm.value.email,
+        companyName: contactForm.value.companyName,
+        contactPerson: contactForm.value.contactPerson,
+        phone: contactForm.value.phone,
+        answers: answers.value,
+      }),
     });
-  } catch (err) {
+
+    if (!response.ok) {
+      const errData = await response.json();
+      throw new Error(errData.error?.message || `HTTP ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log("Survey submitted:", data);
+  } catch (err: any) {
+    contactError.value = err.message || "Noget gik galt";
     console.error("Kunne ikke submit survey", err);
   }
 }

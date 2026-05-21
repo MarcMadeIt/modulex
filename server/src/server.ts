@@ -1,5 +1,6 @@
 import express, { Request, Response } from "express";
 import mongoose from "mongoose";
+import cors from "cors";
 import "dotenv/config";
 import swaggerUi from "swagger-ui-express";
 import { swaggerSpec } from "./config/swagger";
@@ -7,6 +8,14 @@ import router from "./routes";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// CORS - skal stå FØR routes
+app.use(
+  cors({
+    origin: process.env.CLIENT_URL || "http://localhost:5173",
+    credentials: true,
+  }),
+);
 
 app.use(express.json());
 

@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { User } from "../models/User";
-import { SurveyResponse } from "../models/SurveyResponse";
+import { SurveyResponse, IAnswer } from "../models/SurveyResponse";
 
 export const submitSurvey = async (req: Request, res: Response) => {
   try {
@@ -21,11 +21,26 @@ export const submitSurvey = async (req: Request, res: Response) => {
       status: "pending_approval",
     });
 
-    await SurveyResponse.create({
-      userId: user._id,
-      userEmail: user.email,
-      answers,
-    });
+    // The client sends answers as a map { questionId: answer }, but the
+    // SurveyResponse schema stores an array of { questionId, answer }.
+    const answerList: IAnswer[] = Object.entries(answers ?? {}).map(
+      ([questionId, answer]) => ({
+        questionId,
+        answer: answer as string | string[],
+      }),
+    );
+
+    try {
+      await SurveyResponse.create({
+        userId: user._id,
+        userEmail: user.email,
+        answers: answerList,
+      });
+    } catch (err) {
+      // Don't leave an orphaned user that permanently blocks this email.
+      await User.deleteOne({ _id: user._id });
+      throw err;
+    }
 
     return res.status(201).json({
       message: "Survey submitted - awaiting approval",
