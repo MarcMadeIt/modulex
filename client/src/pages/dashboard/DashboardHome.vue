@@ -3,13 +3,10 @@
     <!-- HERO -->
     <section class="dashboard-hero">
       <div class="dashboard-hero-content">
-
-
         <h1>
-          Velkommen tilbage,
+          Velkommen,
           <span>{{ companyName }}</span>
         </h1>
-
         <p>
           Du er godt på vej til at blive Modulex certificeret partner. Færdiggør
           dine åbne moduler for at få adgang til bestillingsportalen.
@@ -33,6 +30,7 @@
 
         <div class="course-filters">
           <button
+            class="filter-button"
             :class="{ active: activeFilter === 'all' }"
             @click="activeFilter = 'all'"
           >
@@ -40,6 +38,7 @@
           </button>
 
           <button
+            class="filter-button"
             :class="{ active: activeFilter === 'active' }"
             @click="activeFilter = 'active'"
           >
@@ -47,10 +46,18 @@
           </button>
 
           <button
+            class="filter-button"
             :class="{ active: activeFilter === 'completed' }"
             @click="activeFilter = 'completed'"
           >
             Afsluttede
+          </button>
+
+          <button
+            class="filter-button filter-button-reset"
+            @click="resetDummyData"
+          >
+            Nulstil data
           </button>
         </div>
       </div>
@@ -59,6 +66,7 @@
         <AppCard
           v-for="course in filteredCourses"
           :key="course.id"
+          class="course-card"
           @click="openCourse(course.id)"
         >
           <div
@@ -71,26 +79,35 @@
               {{ course.icon }}
             </div>
 
-            <span class="badge">
+            <span
+              class="badge"
+              :class="course.completed ? 'badge-success' : 'badge-muted'"
+            >
               {{
                 course.completed ? "Fuldført" : course.progress + "% gennemført"
               }}
             </span>
           </div>
 
-          <h3>{{ course.title }}</h3>
+          <h3 class="card-title">
+            {{ course.title }}
+          </h3>
 
-          <p>{{ course.description }}</p>
+          <p class="card-text">
+            {{ course.description }}
+          </p>
 
-          <AppButton variant="text" arrow>
-            {{
-              course.completed
-                ? "Gense"
-                : course.progress > 0
-                  ? "Fortsæt"
-                  : "Start"
-            }}
-          </AppButton>
+          <div class="card-actions">
+            <AppButton variant="text" arrow>
+              {{
+                course.completed
+                  ? "Gense"
+                  : course.progress > 0
+                    ? "Fortsæt"
+                    : "Start"
+              }}
+            </AppButton>
+          </div>
         </AppCard>
       </div>
     </section>
@@ -98,45 +115,84 @@
 </template>
 
 <script setup>
-import { computed, ref } from "vue";
+import { computed, ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 
 import AppCard from "../../components/ui/AppCard.vue";
 import AppButton from "../../components/ui/AppButton.vue";
 
+import {
+  dummyCourses,
+  dummyModules,
+  dummyUserProgresses,
+} from "../../data/dummyData.js";
+
 const router = useRouter();
 
 const companyName = "Billund Design ApS";
-
 const activeFilter = ref("all");
 
-const courses = ref([
-  {
-    id: 1,
-    icon: "▣",
-    title: "Intro til Modulex Systemer",
-    description: "En grundlæggende gennemgang af vores skiltesystemer.",
-    progress: 45,
-    completed: false,
-  },
-  {
-    id: 2,
-    icon: "▤",
-    title: "Konfiguration & Bestilling",
-    description: "Lær hvordan du bruger vores online værktøjer.",
-    progress: 0,
-    completed: false,
-  },
-  {
-    id: 3,
-    icon: "▣",
-    title: "Brand Guidelines",
-    description: "Sikr at din virksomhed repræsenterer Modulex korrekt.",
-    progress: 100,
-    completed: true,
-  },
-]);
+const courses = ref([]);
 
+onMounted(() => {
+  loadCourses();
+});
+const STORAGE_KEY = "modulex_dummy_data";
+const CURRENT_USER_ID = "665000000000000000000002";
+
+function getData() {
+  const savedData = localStorage.getItem(STORAGE_KEY);
+
+  if (savedData) {
+    return JSON.parse(savedData);
+  }
+
+  const initialData = {
+    courses: dummyCourses,
+    modules: dummyModules,
+    userProgresses: dummyUserProgresses,
+  };
+
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(initialData));
+
+  return initialData;
+}
+
+function mapCoursesForFrontend(data) {
+  return data.courses.map((course, index) => {
+    const progressData = data.userProgresses.find(
+      (progress) =>
+        progress.courseId === course._id && progress.userId === CURRENT_USER_ID,
+    );
+
+    const courseModules = data.modules.filter(
+      (module) => module.courseId === course._id,
+    );
+
+    const progress = progressData ? progressData.progress : 0;
+
+    return {
+      id: course._id,
+      icon: index % 2 === 0 ? "▣" : "▤",
+      title: course.title,
+      description: course.description,
+      progress,
+      completed: progress >= 100,
+      moduleCount: courseModules.length,
+      modules: courseModules,
+    };
+  });
+}
+
+function loadCourses() {
+  const data = getData();
+  courses.value = mapCoursesForFrontend(data);
+}
+
+function resetDummyData() {
+  localStorage.removeItem(STORAGE_KEY);
+  loadCourses();
+}
 const filteredCourses = computed(() => {
   if (activeFilter.value === "completed") {
     return courses.value.filter((c) => c.completed);
@@ -154,7 +210,35 @@ function openCourse(id) {
 }
 
 function goToFirstCourse() {
-  const first = courses.value[0];
-  if (first) openCourse(first.id);
+  const firstActiveCourse =
+    courses.value.find((course) => !course.completed) || courses.value[0];
+
+  if (firstActiveCourse) {
+    openCourse(firstActiveCourse.id);
+  }
 }
 </script>
+<style scoped>
+.course-card {
+  cursor: pointer;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.course-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-card);
+}
+
+/* temporary reset button */
+.filter-button-reset {
+  background: var(--color-error-bg);
+  color: var(--color-error);
+}
+
+.filter-button-reset:hover {
+  background: var(--color-error);
+  color: white;
+}
+</style>
