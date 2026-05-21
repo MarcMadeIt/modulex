@@ -1,7 +1,7 @@
 <template>
   <div style="min-height: 100vh; background-color: #f4f5f6; display: flex; align-items: center; justify-content: center; padding: 20px; font-family: system-ui, sans-serif;">
     
-    <div class="card" style="max-width: 460px; width: 100%; text-align: center;">
+    <div class="card" style="max-width: 560px; width: 100%; text-align: center;">
       
       <div style="margin-bottom: 32px;">
         <h1 style="font-size: 2.5rem; font-weight: 800; color: #333; margin: 0; font-family: ui-monospace, monospace;">
@@ -15,50 +15,38 @@
         
         <div class="input-group">
           <label for="name" class="input-label">Fuld navn</label>
-          <input
-            id="name"
-            v-model="name"
-            type="text"
-            placeholder="Dit navn"
-            class="input"
-            required
-          />
+          <input id="name" v-model="name" type="text" placeholder="Dit navn" class="input" required />
+        </div>
+
+        <div class="input-group">
+          <label for="company" class="input-label">Firma / Organisation</label>
+          <input id="company" v-model="company" type="text" placeholder="Firma A/S" class="input" required />
         </div>
 
         <div class="input-group">
           <label for="email" class="input-label">Email adresse</label>
-          <input
-            id="email"
-            v-model="email"
-            type="email"
-            placeholder="navn@firma.dk"
-            class="input"
-            required
-          />
+          <input id="email" v-model="email" type="email" placeholder="navn@firma.dk" class="input" required />
         </div>
 
         <div class="input-group">
           <label for="password" class="input-label">Password</label>
-          <input
-            id="password"
-            v-model="password"
-            type="password"
-            placeholder="*********"
-            class="input"
-            required
-          />
+          <input id="password" v-model="password" type="password" placeholder="*********" class="input" required />
+          
+          <p style="margin-top: 10px; font-size: 0.75rem; color: #9ca3af; line-height: 1.5; font-weight: 500;">
+            Adgangskoden skal bestå af mindst
+            <span :style="{ color: hasLength ? '#10b981' : 'inherit', fontWeight: hasLength ? '700' : 'inherit', transition: 'color 0.3s' }">8 tegn</span>,
+            indeholde et
+            <span :style="{ color: hasUpper ? '#10b981' : 'inherit', fontWeight: hasUpper ? '700' : 'inherit', transition: 'color 0.3s' }">stort bogstav</span>,
+            et
+            <span :style="{ color: hasNumber ? '#10b981' : 'inherit', fontWeight: hasNumber ? '700' : 'inherit', transition: 'color 0.3s' }">tal</span>
+            samt et
+            <span :style="{ color: hasSpecial ? '#10b981' : 'inherit', fontWeight: hasSpecial ? '700' : 'inherit', transition: 'color 0.3s' }">specialtegn (!@#$%)</span>.
+          </p>
         </div>
 
         <div class="input-group">
           <label for="confirmPassword" class="input-label">Gentag password</label>
-          <input
-            id="confirmPassword"
-            v-model="confirmPassword"
-            type="password"
-            placeholder="*********"
-            class="input"
-            required
-          />
+          <input id="confirmPassword" v-model="confirmPassword" type="password" placeholder="*********" class="input" required />
         </div>
 
         <p v-if="errorMessage" style="color: #e04f26; font-size: 0.8rem; font-weight: 600; margin-top: -10px; text-align: center;">
@@ -66,7 +54,12 @@
         </p>
 
         <div style="margin-top: 12px;">
-          <button type="submit" class="btn btn-dark btn-full">
+          <button 
+            type="submit" 
+            class="btn btn-dark btn-full"
+            :disabled="!isFormValid"
+            :style="{ opacity: isFormValid ? '1' : '0.5', cursor: isFormValid ? 'pointer' : 'not-allowed' }"
+          >
             <span>Tilmeld</span>
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" style="width: 16px; height: 16px;">
               <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
@@ -86,27 +79,44 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 
 const name = ref('')
+const company = ref('')
 const email = ref('')
 const password = ref('')
 const confirmPassword = ref('')
 const errorMessage = ref('')
 
+const hasLength = computed(() => password.value.length >= 8)
+const hasUpper = computed(() => /[A-ZÆØÅ]/.test(password.value))
+const hasNumber = computed(() => /[0-9]/.test(password.value))
+const hasSpecial = computed(() => /[^A-Za-z0-9ÆØÅæøå]/.test(password.value))
+
+const isPasswordSecure = computed(() => 
+  hasLength.value && hasUpper.value && hasNumber.value && hasSpecial.value
+)
+
+const isFormValid = computed(() => 
+  name.value && company.value && email.value && isPasswordSecure.value && (password.value === confirmPassword.value)
+)
+
 const handleSignup = () => {
-  // Nulstil evt. tidligere fejl
   errorMessage.value = ''
 
-  // Tjek om adgangskoderne er ens
+  if (!isPasswordSecure.value) {
+    errorMessage.value = 'Adgangskoden opfylder ikke alle sikkerhedskrav.'
+    return
+  }
+
   if (password.value !== confirmPassword.value) {
     errorMessage.value = 'Adgangskoderne stemmer ikke overens!'
     return
   }
 
-  // Hvis de matcher, fortsæt med at sende data til backend
   console.log('Forsøger oprettelse med:', {
     name: name.value,
+    company: company.value,
     email: email.value,
     password: password.value
   })
