@@ -12,14 +12,83 @@
           {{ error }}
         </div>
 
-        <!-- Completed -->
-        <div v-else-if="completed" class="survey-completed">
-          <h1 class="survey-completed-title">Tak for dine svar</h1>
-          <p class="survey-completed-text">
-            Dine svar er blevet sendt til Modulex' kundesupport. Når dit
-            personlige onboarding flow er sat sammen vil du modtage en email
-            invitiation.
-          </p>
+        <!-- Contact Form -->
+        <div v-else-if="completed" class="survey-card">
+          <!-- Progress -->
+          <ProgressBar :percentage="100" />
+
+          <!-- Header -->
+          <div class="survey-header">
+            <div class="survey-icon">📧</div>
+            <div>
+              <h1 class="survey-title">Næste skridt</h1>
+              <p class="survey-description">
+                Udfyld dine kontaktoplysninger for at afslutte
+              </p>
+            </div>
+          </div>
+
+          <!-- Contact Form -->
+          <div class="contact-form-wrapper">
+            <form @submit.prevent="handleContactSubmit">
+              <div class="form-group">
+                <label class="input-label">Virksomhedsnavn</label>
+                <input
+                  v-model="contactForm.companyName"
+                  type="text"
+                  class="input"
+                  placeholder="Navn på virksomhed"
+                  required
+                />
+              </div>
+
+              <div class="form-group">
+                <label class="input-label">Kontaktperson</label>
+                <input
+                  v-model="contactForm.contactPerson"
+                  type="text"
+                  class="input"
+                  placeholder="Dit navn"
+                  required
+                />
+              </div>
+
+              <div class="form-group">
+                <label class="input-label">Email</label>
+                <input
+                  v-model="contactForm.email"
+                  type="email"
+                  class="input"
+                  placeholder="din@email.dk"
+                  required
+                />
+              </div>
+
+              <div class="form-group">
+                <label class="input-label">Telefon</label>
+                <input
+                  v-model="contactForm.phone"
+                  type="tel"
+                  class="input"
+                  placeholder="+45 12 34 56 78"
+                  required
+                />
+              </div>
+
+              <button type="submit" class="btn btn-primary btn-full">
+                Afslut
+              </button>
+            </form>
+
+            <div v-if="contactError" class="error-box">
+              {{ contactError }}
+            </div>
+          </div>
+
+          <div class="survey-footer">
+            <div class="survey-footer-item active">PERSONLIG PROFIL</div>
+            <div class="survey-footer-item active">KONTAKTOPLYSNINGER</div>
+          </div>
         </div>
 
         <!-- Survey -->
@@ -72,6 +141,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
 import ProgressBar from "../../components/ui/ProgressBar.vue";
+const API_URL = import.meta.env.VITE_API_URL; 
 
 type SurveyOption = {
   value: string;
@@ -91,6 +161,14 @@ const answers = ref<Record<string, string>>({});
 const loading = ref(true);
 const completed = ref(false);
 const error = ref<string | null>(null);
+const contactError = ref<string | null>(null);
+
+const contactForm = ref({
+  companyName: "",
+  contactPerson: "",
+  email: "",
+  phone: "",
+});
 
 const currentQuestion = computed(() => questions.value[step.value]);
 
@@ -204,7 +282,7 @@ async function handleAnswer(option: string) {
 
 async function submitSurvey() {
   try {
-    await fetch("/survey/submit", {
+      await fetch(`${API_URL}/survey`, {   
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -358,5 +436,50 @@ async function submitSurvey() {
   line-height: 1.7;
 
   color: var(--color-text-secondary);
+}
+
+.contact-form-wrapper {
+  padding: var(--space-6);
+}
+
+.form-group {
+  margin-bottom: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.form-group:last-of-type {
+  margin-bottom: var(--space-6);
+}
+
+.input-label {
+  font-size: var(--text-xs);
+  font-weight: 800;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.input {
+  width: 100%;
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-md);
+  padding: 1rem 1.25rem;
+  font-size: var(--text-sm);
+  background-color: var(--color-primary-ultralight);
+  color: var(--color-text-primary);
+  transition: 0.2s ease;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--color-primary-orange);
+  background-color: var(--color-bg-paper);
+}
+
+.input::placeholder {
+  color: var(--color-text-secondary);
+  opacity: 0.7;
 }
 </style>
