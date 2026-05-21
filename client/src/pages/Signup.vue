@@ -35,11 +35,11 @@
           <p style="margin-top: 10px; font-size: 0.75rem; color: #9ca3af; line-height: 1.5; font-weight: 500;">
             Adgangskoden skal bestå af mindst
             <span :style="{ color: hasLength ? '#10b981' : 'inherit', fontWeight: hasLength ? '700' : 'inherit', transition: 'color 0.3s' }">8 tegn</span>,
-            indeholde et
+
             <span :style="{ color: hasUpper ? '#10b981' : 'inherit', fontWeight: hasUpper ? '700' : 'inherit', transition: 'color 0.3s' }">stort bogstav</span>,
-            et
-            <span :style="{ color: hasNumber ? '#10b981' : 'inherit', fontWeight: hasNumber ? '700' : 'inherit', transition: 'color 0.3s' }">tal</span>
-            samt et
+
+            <span :style="{ color: hasNumber ? '#10b981' : 'inherit', fontWeight: hasNumber ? '700' : 'inherit', transition: 'color 0.3s' }">tal</span> og
+
             <span :style="{ color: hasSpecial ? '#10b981' : 'inherit', fontWeight: hasSpecial ? '700' : 'inherit', transition: 'color 0.3s' }">specialtegn (!@#$%)</span>.
           </p>
         </div>
