@@ -32,8 +32,9 @@
           <div class="contact-form-wrapper">
             <form @submit.prevent="handleContactSubmit">
               <div class="form-group">
-                <label class="input-label">Virksomhedsnavn</label>
+                <label class="input-label" for="contact-company">Virksomhedsnavn</label>
                 <input
+                  id="contact-company"
                   v-model="contactForm.companyName"
                   type="text"
                   class="input"
@@ -43,8 +44,9 @@
               </div>
 
               <div class="form-group">
-                <label class="input-label">Kontaktperson</label>
+                <label class="input-label" for="contact-person">Kontaktperson</label>
                 <input
+                  id="contact-person"
                   v-model="contactForm.contactPerson"
                   type="text"
                   class="input"
@@ -54,8 +56,9 @@
               </div>
 
               <div class="form-group">
-                <label class="input-label">Email</label>
+                <label class="input-label" for="contact-email">Email</label>
                 <input
+                  id="contact-email"
                   v-model="contactForm.email"
                   type="email"
                   class="input"
@@ -65,8 +68,9 @@
               </div>
 
               <div class="form-group">
-                <label class="input-label">Telefon</label>
+                <label class="input-label" for="contact-phone">Telefon</label>
                 <input
+                  id="contact-phone"
                   v-model="contactForm.phone"
                   type="tel"
                   class="input"
@@ -212,9 +216,9 @@ async function handleContactSubmit() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        email: contactForm.value.email,
         companyName: contactForm.value.companyName,
         contactPerson: contactForm.value.contactPerson,
+        email: contactForm.value.email,
         phone: contactForm.value.phone,
         answers: answers.value,
       }),

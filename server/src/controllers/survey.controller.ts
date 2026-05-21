@@ -4,7 +4,7 @@ import { SurveyResponse, IAnswer } from "../models/SurveyResponse";
 
 export const submitSurvey = async (req: Request, res: Response) => {
   try {
-    const { email, companyName, contactPerson, phone, answers } = req.body;
+    const { email, phone, answers } = req.body;
 
     const existing = await User.findOne({ email });
     if (existing) {
@@ -15,8 +15,6 @@ export const submitSurvey = async (req: Request, res: Response) => {
 
     const user = await User.create({
       email,
-      companyName,
-      contactPerson,
       phone,
       status: "pending_approval",
     });

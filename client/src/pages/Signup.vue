@@ -14,16 +14,6 @@
       <form @submit.prevent="handleSignup" style="text-align: left; display: flex; flex-direction: column; gap: 20px;">
         
         <div class="input-group">
-          <label for="name" class="input-label">Fuld navn</label>
-          <input id="name" v-model="name" type="text" placeholder="Dit navn" class="input" required />
-        </div>
-
-        <div class="input-group">
-          <label for="company" class="input-label">Firma / Organisation</label>
-          <input id="company" v-model="company" type="text" placeholder="Firma A/S" class="input" required />
-        </div>
-
-        <div class="input-group">
           <label for="email" class="input-label">Email adresse</label>
           <input id="email" v-model="email" type="email" placeholder="navn@firma.dk" class="input" required />
         </div>
@@ -81,8 +71,8 @@
 <script setup>
 import { ref, computed } from 'vue'
 
-const name = ref('')
-const company = ref('')
+const API_URL = import.meta.env.VITE_API_URL
+
 const email = ref('')
 const password = ref('')
 const confirmPassword = ref('')
@@ -98,10 +88,10 @@ const isPasswordSecure = computed(() =>
 )
 
 const isFormValid = computed(() => 
-  name.value && company.value && email.value && isPasswordSecure.value && (password.value === confirmPassword.value)
+  email.value && isPasswordSecure.value && (password.value === confirmPassword.value)
 )
 
-const handleSignup = () => {
+const handleSignup = async () => {
   errorMessage.value = ''
 
   if (!isPasswordSecure.value) {
@@ -114,11 +104,29 @@ const handleSignup = () => {
     return
   }
 
-  console.log('Forsøger oprettelse med:', {
-    name: name.value,
-    company: company.value,
-    email: email.value,
-    password: password.value
-  })
+  try {
+    const response = await fetch(`${API_URL}/signup`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email: email.value,
+        password: password.value,
+      }),
+    })
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      errorMessage.value = data.message || 'Signup mislykkedes.'
+      return
+    }
+
+    console.log('Signup successful:', data)
+  } catch (err) {
+    errorMessage.value = 'Kunne ikke oprette bruger. Prøv igen senere.'
+    console.error('Signup error:', err)
+  }
 }
 </script>
