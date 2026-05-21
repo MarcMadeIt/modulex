@@ -96,6 +96,11 @@
           <p class="card-text">
             {{ course.description }}
           </p>
+          <div class="course-card-meta">
+            <span>{{ course.moduleCount }} moduler</span>
+            <span class="meta-dot">•</span>
+            <span>{{ course.totalDuration }} min</span>
+          </div>
 
           <div class="card-actions">
             <AppButton variant="text" arrow>
@@ -179,9 +184,17 @@ function mapCoursesForFrontend(data) {
       progress,
       completed: progress >= 100,
       moduleCount: courseModules.length,
+      totalDuration: getTotalDuration(courseModules),
       modules: courseModules,
     };
   });
+
+  function getTotalDuration(modules) {
+    return modules.reduce((total, module) => {
+      const minutes = parseInt(module.duration) || 0;
+      return total + minutes;
+    }, 0);
+  }
 }
 
 function loadCourses() {
@@ -240,5 +253,66 @@ function goToFirstCourse() {
 .filter-button-reset:hover {
   background: var(--color-error);
   color: white;
+}
+
+.course-card {
+  min-height: 260px;
+  padding: var(--space-5);
+  cursor: pointer;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.course-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-card);
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-5);
+}
+
+.icon-box {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-md);
+  background: rgba(239, 65, 35, 0.08);
+  color: var(--color-primary-orange);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+}
+
+.course-card .card-title {
+  font-size: var(--text-md);
+  margin-bottom: var(--space-3);
+}
+
+.course-card .card-text {
+  min-height: 48px;
+  line-height: 1.5;
+}
+
+.course-card-meta {
+  display: flex;
+  gap: var(--space-4);
+  margin-top: var(--space-5);
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.course-card .card-actions {
+  margin-top: var(--space-5);
+}
+
+.meta-dot {
+  opacity: 0.4;
 }
 </style>
