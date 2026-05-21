@@ -141,7 +141,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
 import ProgressBar from "../../components/ui/ProgressBar.vue";
-const API_URL = import.meta.env.VITE_API_URL; 
+const API_URL = import.meta.env.VITE_API_URL;
 
 type SurveyOption = {
   value: string;
@@ -282,11 +282,7 @@ async function handleAnswer(option: string) {
 
 async function submitSurvey() {
   try {
-<<<<<<< Updated upstream
-      await fetch(`${API_URL}/survey`, {   
-=======
     await fetch("/localh/survey", {
->>>>>>> Stashed changes
       method: "POST",
       headers: {
         "Content-Type": "application/json",
