@@ -12,6 +12,20 @@ const routes = [
     component: () => import("../pages/Login.vue"),
   },
   {
+    path: "/",
+    redirect: "/signup", // Sender automatisk brugere til signup som start
+  },
+  {
+    path: "/signup",
+    name: "Signup",
+    component: () => import("../pages/Signup.vue"),
+  },
+  {
+    path: "/login",
+    name: "Login",
+    component: () => import("../pages/Login.vue"),
+  },
+  {
     path: "/dashboard",
     component: DashboardLayout,
     children: [
