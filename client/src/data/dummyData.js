@@ -1,3 +1,37 @@
+export const dummyPartners = [
+    {
+        id: "665000000000000000000002",
+        name: "Søren Hansen",
+        company: "Hansens Skilte",
+        status: "Ikke godkendt",
+        statusClass: "pending",
+        action: "Godkend Partner",
+    },
+    {
+        id: "665000000000000000000003",
+        name: "Maria Jensen",
+        company: "Nordic Print",
+        status: "I gang",
+        statusClass: "active",
+        action: "Tildel kurser",
+    },
+    {
+        id: "665000000000000000000004",
+        name: "Lars Nielsen",
+        company: "City Signs",
+        status: "Fuldført",
+        statusClass: "approved",
+        action: "Se partner",
+    },
+];
+
+export const dummyCourseAssignments = {
+    "665000000000000000000003": [
+        "665000000000000000000101",
+        "665000000000000000000102",
+    ],
+};
+
 export const dummyCourses = [
     {
         _id: "665000000000000000000101",
@@ -26,7 +60,6 @@ export const dummyCourses = [
 ];
 
 export const dummyModules = [
-    // COURSE 1: Intro til Modulex Systemer
     {
         _id: "665000000000000000000201",
         courseId: "665000000000000000000101",
@@ -67,7 +100,8 @@ export const dummyModules = [
         _id: "665000000000000000000205",
         courseId: "665000000000000000000101",
         title: "Partnerportalens opbygning",
-        description: "Lær hvordan partnerportalen er opbygget, og hvor du finder de vigtigste funktioner.",
+        description:
+            "Lær hvordan partnerportalen er opbygget, og hvor du finder de vigtigste funktioner.",
         order: 3,
         duration: "10 min",
         materials: [
@@ -100,7 +134,6 @@ export const dummyModules = [
         updatedAt: "2026-05-20T10:00:00.000Z",
     },
 
-    // COURSE 2: Konfiguration & Bestilling
     {
         _id: "665000000000000000000202",
         courseId: "665000000000000000000102",
@@ -192,7 +225,6 @@ export const dummyModules = [
         updatedAt: "2026-05-20T10:00:00.000Z",
     },
 
-    // COURSE 3: Brand Guidelines
     {
         _id: "665000000000000000000203",
         courseId: "665000000000000000000103",
@@ -233,7 +265,8 @@ export const dummyModules = [
         _id: "665000000000000000000212",
         courseId: "665000000000000000000103",
         title: "Farver og typografi",
-        description: "Introduktion til Modulex farver, typografi og grafiske principper.",
+        description:
+            "Introduktion til Modulex farver, typografi og grafiske principper.",
         order: 3,
         duration: "7 min",
         materials: [
