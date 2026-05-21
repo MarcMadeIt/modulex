@@ -16,7 +16,7 @@
       </div>
 
       <div class="dashboard-hero-pattern">
-        <span v-for="n in 8" :key="n"></span>
+        <span v-for="n in 12" :key="n"></span>
       </div>
     </section>
 
@@ -322,5 +322,122 @@ function goToFirstCourse() {
 
 .meta-dot {
   opacity: 0.4;
+}
+
+.dashboard-hero {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  min-height: 280px;
+  padding: 48px 64px;
+  border-radius: 32px;
+  background: #191919;
+  color: #fff;
+}
+
+.dashboard-hero-content {
+  position: relative;
+  z-index: 2;
+  max-width: 680px;
+}
+
+.dashboard-hero h1 {
+  margin: 0 0 20px;
+  font-size: clamp(36px, 3.6vw, 56px);
+  line-height: 1.05;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+}
+
+.dashboard-hero h1 span {
+  color: #ff3b22;
+}
+
+.dashboard-hero p {
+  max-width: 760px;
+  margin: 0 0 40px;
+  color: #a6adba;
+  font-size: clamp(18px, 1.6vw, 28px);
+  line-height: 1.55;
+  font-weight: 500;
+}
+
+.dashboard-hero-pattern {
+  position: absolute;
+  right: -72px;
+  bottom: -100px;
+  z-index: 1;
+
+  width: 48%;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 22px;
+  padding: 28px 0;
+
+  opacity: 0.1;
+  pointer-events: none;
+}
+
+.dashboard-hero-pattern span {
+  aspect-ratio: 1;
+  border-radius: 14px;
+  background: #fff;
+  transform: scale(1);
+  transition:
+    transform 350ms ease,
+    opacity 350ms ease;
+}
+
+.dashboard-hero:hover .dashboard-hero-pattern span {
+  transform: scale(1.08);
+  opacity: 1;
+}
+
+.dashboard-hero-pattern span:nth-child(1) {
+  transition-delay: 50ms;
+}
+
+.dashboard-hero-pattern span:nth-child(2) {
+  transition-delay: 100ms;
+}
+
+.dashboard-hero-pattern span:nth-child(3) {
+  transition-delay: 150ms;
+}
+
+.dashboard-hero-pattern span:nth-child(4) {
+  transition-delay: 200ms;
+}
+
+.dashboard-hero-pattern span:nth-child(5) {
+  transition-delay: 250ms;
+}
+
+.dashboard-hero-pattern span:nth-child(6) {
+  transition-delay: 300ms;
+}
+
+.dashboard-hero-pattern span:nth-child(7) {
+  transition-delay: 350ms;
+}
+
+.dashboard-hero-pattern span:nth-child(8) {
+  transition-delay: 400ms;
+}
+
+.dashboard-hero-pattern span:nth-child(9) {
+  transition-delay: 450ms;
+}
+
+.dashboard-hero-pattern span:nth-child(10) {
+  transition-delay: 500ms;
+}
+
+.dashboard-hero-pattern span:nth-child(11) {
+  transition-delay: 550ms;
+}
+
+.dashboard-hero-pattern span:nth-child(12) {
+  transition-delay: 600ms;
 }
 </style>
