@@ -38,7 +38,7 @@ const routes = [
       {
         path: "admin",
         name: "Admin",
-        component: () => import("../pages/Admin.vue"),
+          component: () => import("../layouts/admin/AdminDashboardHome.vue"),
       },
 
       {
