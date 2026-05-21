@@ -1,0 +1,15 @@
+export {
+  ArrowLeft,
+  ArrowRight,
+  BookOpen,
+  Clock3,
+  CircleCheck,
+  ChevronRight,
+  GraduationCap,
+  FileText,
+  Clipboard,
+  UserCheck,
+  Star,
+  LogOut,
+  Video,
+} from "lucide-vue-next";
