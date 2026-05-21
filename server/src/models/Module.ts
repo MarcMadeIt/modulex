@@ -5,6 +5,7 @@ export interface IMaterial {
   title: string;
   url?: string;
   content?: string;
+  expectedDuration?: number; // in minutes
 }
 
 export interface IModule extends Document {
@@ -21,6 +22,7 @@ const materialSchema = new Schema<IMaterial>(
     title: { type: String, required: true, trim: true },
     url: { type: String },
     content: { type: String },
+    expectedDuration: { type: Number }, // in minutes
   },
   { _id: false },
 );
