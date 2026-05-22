@@ -16,26 +16,24 @@
         </nav>
 
         <div class="sidebar-footer">
-            <RouterLink to="/logout" class="sidebar-link">
+            <button type="button" class="sidebar-link" @click="handleLogout">
                 <span>Log ud</span>
-            </RouterLink>
+            </button>
         </div>
     </aside>
 </template>
 
 <script setup>
-    const navItems = [
-        {
-            label: 'Dashboard',
-            path: '/dashboard'
-        },
-        {
-            label: 'Kurser',
-            path: '/courses'
-        },
-        {
-            label: 'Indstillinger',
-            path: '/settings'
-        }
-    ]
+import { useRouter } from "vue-router";
+import { auth } from "../../stores/auth";
+const router = useRouter();
+const navItems = [
+    { label: 'Dashboard', path: '/dashboard' },
+    { label: 'Kurser', path: '/courses' },
+    { label: 'Indstillinger', path: '/settings' }
+];
+const handleLogout = async () => {
+    await auth.logout();
+    router.push("/login"); 
+};
 </script>

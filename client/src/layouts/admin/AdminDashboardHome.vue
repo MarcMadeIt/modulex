@@ -10,7 +10,7 @@
                 <button class="create-lead-btn"
                         type="button"
                         @click="openCreateLeadModal">
-                    + Opret lead / kunde
+                    + Send spørgeskema
                 </button>
 
                 <button class="create-course-btn"
@@ -27,7 +27,7 @@
                     <Users :size="20" />
                 </div>
 
-                <p>AKTIVE PARTNERE</p>
+                <p>KLAR TIL KURSUS</p>
                 <h2>{{ partners.length }}</h2>
             </AppCard>
 
@@ -36,7 +36,7 @@
                     <BookOpen :size="20" />
                 </div>
 
-                <p>AKTIVE KURSER</p>
+                <p>IGANGVÆRENDE KURSUS</p>
                 <h2>{{ courses.length }}</h2>
             </AppCard>
 
@@ -60,13 +60,13 @@
                     <button type="button"
                             :class="{ 'admin-tab-active': activeTab === 'partners' }"
                             @click="activeTab = 'partners'">
-                        Aktive partnere ({{ filteredPartners.length }})
+                        Klar til kursus ({{ filteredPartners.length }})
                     </button>
 
                     <button type="button"
                             :class="{ 'admin-tab-active': activeTab === 'leads' }"
                             @click="activeTab = 'leads'">
-                        Leads & onboarding ({{ filteredLeads.length }})
+                        Igangværende ({{ filteredLeads.length }})
                     </button>
                 </div>
             </div>
@@ -356,6 +356,7 @@
     const selectedCourseIds = ref([]);
     const courseSearch = ref("");
     const refreshKey = ref(0);
+    const showCreateCourseModal = ref(false);
 
     const showCreateLeadModal = ref(false);
     const showCreateCourseForm = ref(false);
