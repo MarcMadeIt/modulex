@@ -1,12 +1,7 @@
 import { Router } from "express";
 import { authRequired } from "../middleware/auth.middleware";
 
-import {
-  signup,
-  login,
-  getMe,
-  logout,
-} from "../controllers/auth.controller";
+import { signup, login, getMe, logout } from "../controllers/auth.controller";
 
 const router = Router();
 
@@ -54,13 +49,13 @@ router.post("/signup", signup);
  *             admin:
  *               summary: Admin account
  *               value:
- *                 email: admin@example.com
- *                 password: Secret123!
+ *                 email: admin@test.dk
+ *                 password: test1234!
  *             client:
  *               summary: Client account
  *               value:
- *                 email: user@example.com
- *                 password: Secret123!
+ *                 email: user@test.dk
+ *                 password: test1234!
  *     responses:
  *       200:
  *         description: Login successful

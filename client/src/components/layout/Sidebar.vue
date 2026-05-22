@@ -17,30 +17,25 @@
       </RouterLink>
     </nav>
 
-    <div class="sidebar-footer">
-      <RouterLink to="/logout" class="sidebar-link">
-        <LogOut :size="18" />
-        <span>Log ud</span>
-      </RouterLink>
-    </div>
-  </aside>
+        <div class="sidebar-footer">
+            <button type="button" class="sidebar-link" @click="handleLogout">
+                <span>Log ud</span>
+            </button>
+        </div>
+    </aside>
 </template>
 
 <script setup>
-import { LogOut } from "lucide-vue-next";
-
+import { useRouter } from "vue-router";
+import { auth } from "../../stores/auth";
+const router = useRouter();
 const navItems = [
-  {
-    label: "Dashboard",
-    path: "/dashboard",
-  },
-  {
-    label: "Kurser",
-    path: "/courses",
-  },
-  {
-    label: "Indstillinger",
-    path: "/settings",
-  },
+    { label: 'Dashboard', path: '/dashboard' },
+    { label: 'Kurser', path: '/courses' },
+    { label: 'Indstillinger', path: '/settings' }
 ];
+const handleLogout = async () => {
+    await auth.logout();
+    router.push("/login"); 
+};
 </script>

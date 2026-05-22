@@ -12,14 +12,99 @@
           {{ error }}
         </div>
 
-        <!-- Completed -->
-        <div v-else-if="completed" class="survey-completed">
-          <h1 class="survey-completed-title">Tak for dine svar</h1>
-          <p class="survey-completed-text">
-            Dine svar er blevet sendt til Modulex' kundesupport. Når dit
-            personlige onboarding flow er sat sammen vil du modtage en email
-            invitiation.
-          </p>
+        <!-- Contact Form -->
+        <div v-else-if="completed" class="survey-card">
+          <!-- Progress -->
+          <ProgressBar :percentage="100" />
+
+          <!-- Header -->
+          <div class="survey-header">
+            <div class="survey-icon">📧</div>
+            <div>
+              <h1 class="survey-title">Næste skridt</h1>
+              <p class="survey-description">
+                Udfyld dine kontaktoplysninger for at afslutte
+              </p>
+            </div>
+          </div>
+
+          <!-- Contact Form -->
+          <div class="contact-form-wrapper">
+            <template v-if="contactSuccess">
+              <div class="contact-confirmation">
+                <div class="confirmation-icon">✓</div>
+                <h3>Tak — dine oplysninger er sendt</h3>
+                <p>
+                  Vi har modtaget dine kontaktoplysninger og vender tilbage til dig snarest.
+                </p>
+              </div>
+            </template>
+
+            <template v-else>
+              <form @submit.prevent="handleContactSubmit">
+                <div class="form-group">
+                  <label class="input-label" for="contact-company">Virksomhedsnavn</label>
+                  <input
+                    id="contact-company"
+                    v-model="contactForm.companyName"
+                    type="text"
+                    class="input"
+                    placeholder="Navn på virksomhed"
+                    required
+                  />
+                </div>
+
+                <div class="form-group">
+                  <label class="input-label" for="contact-person">Kontaktperson</label>
+                  <input
+                    id="contact-person"
+                    v-model="contactForm.contactPerson"
+                    type="text"
+                    class="input"
+                    placeholder="Dit navn"
+                    required
+                  />
+                </div>
+
+                <div class="form-group">
+                  <label class="input-label" for="contact-email">Email</label>
+                  <input
+                    id="contact-email"
+                    v-model="contactForm.email"
+                    type="email"
+                    class="input"
+                    placeholder="din@email.dk"
+                    required
+                  />
+                </div>
+
+                <div class="form-group">
+                  <label class="input-label" for="contact-phone">Telefon</label>
+                  <input
+                    id="contact-phone"
+                    v-model="contactForm.phone"
+                    type="tel"
+                    class="input"
+                    placeholder="+45 12 34 56 78"
+                    required
+                  />
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-full">
+                  Indsend
+                </button>
+              </form>
+
+              <div v-if="contactError" class="error-box">
+                {{ contactError }}
+              </div>
+            </template>
+          </div>
+
+          <div class="survey-footer">
+            <div class="survey-footer-item active">PERSONLIG PROFIL</div>
+            <div class="survey-footer-item active">KONTAKTOPLYSNINGER</div>
+          </div>
         </div>
 
         <!-- Survey -->
@@ -72,6 +157,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
 import ProgressBar from "../../components/ui/ProgressBar.vue";
+import { dummyQuestions } from "../../data/surveyQuestions";
+const API_URL = import.meta.env.VITE_API_URL;
 
 type SurveyOption = {
   value: string;
@@ -91,6 +178,15 @@ const answers = ref<Record<string, string>>({});
 const loading = ref(true);
 const completed = ref(false);
 const error = ref<string | null>(null);
+const contactError = ref<string | null>(null);
+const contactSuccess = ref(false);
+
+const contactForm = ref({
+  companyName: "",
+  contactPerson: "",
+  email: "",
+  phone: "",
+});
 
 const currentQuestion = computed(() => questions.value[step.value]);
 
@@ -103,86 +199,10 @@ onMounted(() => {
   fetchQuestions();
 });
 
-async function fetchQuestions() {
-  try {
-    loading.value = true;
-    error.value = null;
-
-    const res = await fetch("/survey/questions");
-
-    if (!res.ok) {
-      throw new Error("API ikke klar");
-    }
-
-    const data = await res.json();
-    questions.value = data;
-  } catch (err) {
-    console.warn("Bruger dummy data (API ikke klar)");
-
-    // 👇 DUMMY DATA FALLBACK
-    questions.value = [
-      {
-        id: "business_type",
-        question: "Hvilken type virksomhed driver I?",
-        type: "single",
-        options: [
-          { value: "sign_maker", label: "Skiltemager" },
-          { value: "reseller", label: "Forhandler" },
-          { value: "agency", label: "Bureau" },
-          { value: "other", label: "Andet" },
-        ],
-      },
-      {
-        id: "company_size",
-        question: "Hvor mange medarbejdere er I?",
-        type: "single",
-        options: [
-          { value: "1-5", label: "1-5" },
-          { value: "6-20", label: "6-20" },
-          { value: "21-50", label: "21-50" },
-          { value: "50+", label: "50+" },
-        ],
-      },
-
-      {
-        id: "product_interest",
-        question: "Hvilke produktområder er I interesserede i?",
-        type: "multi",
-        options: [
-          { value: "interior", label: "Interior signs" },
-          { value: "exterior", label: "Exterior signs" },
-          { value: "safety", label: "Safety signs" },
-          { value: "wayfinding", label: "Wayfinding systems" },
-        ],
-      },
-
-      {
-        id: "experience_level",
-        question: "Hvor meget erfaring har I med modulære skiltesystemer?",
-        type: "single",
-        options: [
-          { value: "none", label: "Ingen" },
-          { value: "some", label: "Lidt" },
-          { value: "experienced", label: "Erfaren" },
-        ],
-      },
-
-      {
-        id: "expected_volume",
-        question: "Forventet årligt salgsvolumen?",
-        type: "single",
-        options: [
-          { value: "small", label: "Under 100k EUR" },
-          { value: "medium", label: "100k - 500k EUR" },
-          { value: "large", label: "Over 500k EUR" },
-        ],
-      },
-    ];
-
-    error.value = null;
-  } finally {
-    loading.value = false;
-  }
+function fetchQuestions() {
+  loading.value = true;
+  questions.value = dummyQuestions;
+  loading.value = false;
 }
 
 async function handleAnswer(option: string) {
@@ -194,7 +214,6 @@ async function handleAnswer(option: string) {
   const isLast = step.value === questions.value.length - 1;
 
   if (isLast) {
-    await submitSurvey();
     completed.value = true;
     return;
   }
@@ -202,16 +221,33 @@ async function handleAnswer(option: string) {
   step.value++;
 }
 
-async function submitSurvey() {
+async function handleContactSubmit() {
+  contactError.value = null;
+  contactSuccess.value = false;
+
   try {
-    await fetch("/survey/submit", {
+    const response = await fetch(`${API_URL}/survey`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ answers: answers.value }),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        companyName: contactForm.value.companyName,
+        contactPerson: contactForm.value.contactPerson,
+        email: contactForm.value.email,
+        phone: contactForm.value.phone,
+        answers: answers.value,
+      }),
     });
-  } catch (err) {
+
+    if (!response.ok) {
+      const errData = await response.json();
+      throw new Error(errData.error?.message || `HTTP ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log("Survey submitted:", data);
+    contactSuccess.value = true;
+  } catch (err: any) {
+    contactError.value = err.message || "Noget gik galt";
     console.error("Kunne ikke submit survey", err);
   }
 }
@@ -327,6 +363,36 @@ async function submitSurvey() {
   color: var(--color-primary-medium);
 }
 
+.contact-confirmation {
+  padding: var(--space-7);
+  text-align: center;
+}
+
+.contact-confirmation .confirmation-icon {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto var(--space-4);
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(16, 185, 129, 0.12);
+  color: var(--color-primary-green);
+  font-size: 2rem;
+}
+
+.contact-confirmation h3 {
+  margin-bottom: var(--space-3);
+  font-size: 1.8rem;
+  color: var(--color-text-primary);
+}
+
+.contact-confirmation p {
+  max-width: 620px;
+  margin: 0 auto;
+  color: var(--color-primary-medium);
+  font-size: 1rem;
+}
+
 .survey-completed {
   max-width: 900px;
   margin: 4rem auto 0;
@@ -358,5 +424,50 @@ async function submitSurvey() {
   line-height: 1.7;
 
   color: var(--color-text-secondary);
+}
+
+.contact-form-wrapper {
+  padding: var(--space-6);
+}
+
+.form-group {
+  margin-bottom: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.form-group:last-of-type {
+  margin-bottom: var(--space-6);
+}
+
+.input-label {
+  font-size: var(--text-xs);
+  font-weight: 800;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.input {
+  width: 100%;
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-md);
+  padding: 1rem 1.25rem;
+  font-size: var(--text-sm);
+  background-color: var(--color-primary-ultralight);
+  color: var(--color-text-primary);
+  transition: 0.2s ease;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--color-primary-orange);
+  background-color: var(--color-bg-paper);
+}
+
+.input::placeholder {
+  color: var(--color-text-secondary);
+  opacity: 0.7;
 }
 </style>

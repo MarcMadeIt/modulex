@@ -27,3 +27,5 @@
 /.vs/modulex/FileContentIndex/8d724948-996a-4469-b922-e35dbf9790bc.vsidx
 .vs/
 **/.vs/
+
+.env

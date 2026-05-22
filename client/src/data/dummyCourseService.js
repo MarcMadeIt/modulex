@@ -46,9 +46,9 @@ function mapCoursesForFrontend(data) {
                 progress.userId === CURRENT_USER_ID
         );
 
-        const courseModules = data.modules.filter(
-            (module) => module.courseId === course._id
-        );
+        const courseModules = data.modules
+            .filter((module) => module.courseId === course._id)
+            .sort((a, b) => a.order - b.order);
 
         const progress = progressData ? progressData.progress : 0;
 
@@ -65,51 +65,18 @@ function mapCoursesForFrontend(data) {
     });
 }
 
-/*
-  API SENERE:
-  Denne metode skal senere erstattes med:
-
-  const response = await fetch("/api/courses");
-  const courses = await response.json();
-
-  Hvis I også skal hente progress:
-  const progressResponse = await fetch("/api/progress/me");
-*/
 export function getCourses() {
     const data = getData();
+
     return mapCoursesForFrontend(data);
 }
 
-/*
-  API SENERE:
-  Denne metode kan senere erstattes med:
-
-  const response = await fetch(`/api/courses/${courseId}`);
-  return await response.json();
-*/
 export function getCourseById(courseId) {
     const courses = getCourses();
+
     return courses.find((course) => course.id === courseId);
 }
 
-/*
-  API SENERE:
-  Denne metode kan senere erstattes med:
-
-  await fetch(`/api/progress/modules/${moduleId}/complete`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`
-    }
-  });
-
-  Eller hvis jeres backend arbejder direkte på course progress:
-
-  await fetch(`/api/progress/courses/${courseId}/complete`, {
-    method: "POST"
-  });
-*/
 export function completeCourse(courseId) {
     const data = getData();
 
@@ -146,18 +113,6 @@ export function completeCourse(courseId) {
     return mapCoursesForFrontend(data);
 }
 
-/*
-  API SENERE:
-  Denne metode kan senere erstattes med:
-
-  await fetch(`/api/progress/courses/${courseId}`, {
-    method: "PATCH",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({ progress })
-  });
-*/
 export function updateCourseProgress(courseId, progressValue) {
     const data = getData();
 
@@ -189,19 +144,6 @@ export function updateCourseProgress(courseId, progressValue) {
     return mapCoursesForFrontend(data);
 }
 
-/*
-  API SENERE:
-  Denne metode kan senere erstattes med:
-
-  await fetch("/api/admin/courses", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`
-    },
-    body: JSON.stringify(newCourse)
-  });
-*/
 export function createCourse(newCourse) {
     const data = getData();
 
@@ -230,23 +172,21 @@ export function createCourse(newCourse) {
         });
     }
 
+    data.userProgresses.push({
+        _id: makeId(),
+        userId: CURRENT_USER_ID,
+        courseId: course._id,
+        completedModules: [],
+        progress: 0,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+    });
+
     saveData(data);
 
     return course;
 }
 
-/*
-  API SENERE:
-  Denne metode kan senere erstattes med:
-
-  await fetch(`/api/admin/courses/${courseId}`, {
-    method: "PUT",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(updatedCourse)
-  });
-*/
 export function updateCourse(courseId, updatedCourse) {
     const data = getData();
 
@@ -265,14 +205,6 @@ export function updateCourse(courseId, updatedCourse) {
     return course;
 }
 
-/*
-  API SENERE:
-  Denne metode kan senere erstattes med:
-
-  await fetch(`/api/admin/courses/${courseId}`, {
-    method: "DELETE"
-  });
-*/
 export function deleteCourse(courseId) {
     const data = getData();
 
@@ -287,20 +219,15 @@ export function deleteCourse(courseId) {
     return mapCoursesForFrontend(data);
 }
 
-/*
-  API SENERE:
-  Denne metode kan senere erstattes med:
-
-  const response = await fetch("/api/survey/questions");
-  return await response.json();
-*/
 export function getSurvey() {
     const data = getData();
+
     return data.survey;
 }
 
 export function resetDummyData() {
     const initialData = createInitialData();
+
     saveData(initialData);
 
     return initialData;

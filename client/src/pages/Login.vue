@@ -58,17 +58,42 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref } from "vue";
+import { useRouter } from "vue-router";
+import { auth } from "../stores/auth";
+ 
+const API_URL = import.meta.env.VITE_API_URL;
+const router = useRouter();
+ 
+const email = ref("");
+const password = ref("");
+const errorMessage = ref("");
+ 
+const handleLogin = async () => {
+  errorMessage.value = "";
+  try {
+    const res = await fetch(`${API_URL}/auth/login`, {
+      method: "POST",
+      credentials: "include", // VIGTIGT: så browseren gemmer cookien
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: email.value, password: password.value }),
+    });
+    const data = await res.json();
+ 
+    if (!res.ok) {
+      errorMessage.value = data.message || "Login mislykkedes.";
+      return;
+    }
+ 
+    auth.setUser(data.user);
+ 
+    const redirect = router.currentRoute.value.query.redirect;
+    router.push(
+      redirect || (data.user.role === "admin" ? "/dashboard/admin" : "/dashboard"),
+    );
+  } catch (err) {
+    errorMessage.value = "Kunne ikke logge ind. Prøv igen senere.";
+  }
+};
 
-// Reaktive variable til at holde styr på input-felterne
-const email = ref('')
-const password = ref('')
-
-// Funktion der kører når der trykkes på "Login"
-const handleLogin = () => {
-  console.log('Forsøger login med:', {
-    email: email.value,
-    password: password.value
-  })
-}
 </script>

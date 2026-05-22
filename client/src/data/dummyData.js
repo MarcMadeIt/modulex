@@ -1,9 +1,66 @@
+export const dummyPartners = [
+    {
+        id: "665000000000000000000002",
+        name: "SÃ¸ren Hansen",
+        email: "soren@hansensskilte.dk",
+        company: "Hansens Skilte",
+        status: "I gang",
+        statusClass: "active",
+    },
+    {
+        id: "665000000000000000000003",
+        name: "Mette Jensen",
+        email: "mette@mjdesign.dk",
+        company: "MJ Design",
+        status: "FuldfÃ¸rt",
+        statusClass: "approved",
+    },
+    {
+        id: "665000000000000000000004",
+        name: "Lars Nielsen",
+        email: "lars@billundexpo.dk",
+        company: "Billund Expo",
+        status: "I gang",
+        statusClass: "active",
+    },
+];
+
+export const dummyLeads = [
+    {
+        id: "665000000000000000000901",
+        name: "Anders Andersen",
+        email: "anders@a-skilte.dk",
+        company: "A-Skilte",
+        status: "Afventer svar",
+        statusClass: "waiting",
+        surveyProgress: 35,
+        action: "Simuler svar",
+    },
+    {
+        id: "665000000000000000000902",
+        name: "Pia Poulsen",
+        email: "pia@nordicvisuals.dk",
+        company: "Nordic Visuals",
+        status: "Lead klar",
+        statusClass: "lead-ready",
+        surveyProgress: 0,
+        action: "Send survey",
+    },
+];
+
+export const dummyCourseAssignments = {
+    "665000000000000000000002": [
+        "665000000000000000000101",
+        "665000000000000000000102",
+    ],
+};
+
 export const dummyCourses = [
     {
         _id: "665000000000000000000101",
         title: "Intro til Modulex Systemer",
         description:
-            "En grundlæggende introduktion til Modulex, systemerne og partnerportalen.",
+            "En grundlÃ¦ggende introduktion til Modulex, systemerne og partnerportalen.",
         createdAt: "2026-05-20T10:00:00.000Z",
         updatedAt: "2026-05-20T10:00:00.000Z",
     },
@@ -11,7 +68,7 @@ export const dummyCourses = [
         _id: "665000000000000000000102",
         title: "Konfiguration & Bestilling",
         description:
-            "Lær hvordan du konfigurerer produkter og bruger bestillingsflowet.",
+            "LÃ¦r hvordan du konfigurerer produkter og bruger bestillingsflowet.",
         createdAt: "2026-05-20T10:00:00.000Z",
         updatedAt: "2026-05-20T10:00:00.000Z",
     },
@@ -19,14 +76,13 @@ export const dummyCourses = [
         _id: "665000000000000000000103",
         title: "Brand Guidelines",
         description:
-            "Sikr at din virksomhed repræsenterer Modulex korrekt i salg og kommunikation.",
+            "Sikr at din virksomhed reprÃ¦senterer Modulex korrekt i salg og kommunikation.",
         createdAt: "2026-05-20T10:00:00.000Z",
         updatedAt: "2026-05-20T10:00:00.000Z",
     },
 ];
 
 export const dummyModules = [
-    // COURSE 1: Intro til Modulex Systemer
     {
         _id: "665000000000000000000201",
         courseId: "665000000000000000000101",
@@ -49,7 +105,7 @@ export const dummyModules = [
         _id: "665000000000000000000204",
         courseId: "665000000000000000000101",
         title: "Hvad er Modulex?",
-        description: "Gennemgang af Modulex som brand, virksomhed og partnernetværk.",
+        description: "Gennemgang af Modulex som brand, virksomhed og partnernetvÃ¦rk.",
         order: 2,
         duration: "6 min",
         materials: [
@@ -67,7 +123,8 @@ export const dummyModules = [
         _id: "665000000000000000000205",
         courseId: "665000000000000000000101",
         title: "Partnerportalens opbygning",
-        description: "Lær hvordan partnerportalen er opbygget, og hvor du finder de vigtigste funktioner.",
+        description:
+            "LÃ¦r hvordan partnerportalen er opbygget, og hvor du finder de vigtigste funktioner.",
         order: 3,
         duration: "10 min",
         materials: [
@@ -84,14 +141,14 @@ export const dummyModules = [
     {
         _id: "665000000000000000000206",
         courseId: "665000000000000000000101",
-        title: "Afslutning og næste skridt",
-        description: "Opsamling på introduktionskurset og hvad du skal gøre bagefter.",
+        title: "Afslutning og nÃ¦ste skridt",
+        description: "Opsamling pÃ¥ introduktionskurset og hvad du skal gÃ¸re bagefter.",
         order: 4,
         duration: "5 min",
         materials: [
             {
                 type: "pdf",
-                title: "Næste skridt som Modulex partner",
+                title: "NÃ¦ste skridt som Modulex partner",
                 fileUrl: "/files/naeste-skridt.pdf",
                 size: "950 KB",
             },
@@ -100,12 +157,11 @@ export const dummyModules = [
         updatedAt: "2026-05-20T10:00:00.000Z",
     },
 
-    // COURSE 2: Konfiguration & Bestilling
     {
         _id: "665000000000000000000202",
         courseId: "665000000000000000000102",
-        title: "Sådan bruger du bestillingsportalen",
-        description: "PDF-guide til opsætning og bestilling af produkter.",
+        title: "SÃ¥dan bruger du bestillingsportalen",
+        description: "PDF-guide til opsÃ¦tning og bestilling af produkter.",
         order: 1,
         duration: "7 min",
         materials: [
@@ -123,7 +179,7 @@ export const dummyModules = [
         _id: "665000000000000000000207",
         courseId: "665000000000000000000102",
         title: "Opret en produktkonfiguration",
-        description: "Lær hvordan du vælger produkter og opsætter en konfiguration.",
+        description: "LÃ¦r hvordan du vÃ¦lger produkter og opsÃ¦tter en konfiguration.",
         order: 2,
         duration: "14 min",
         materials: [
@@ -159,13 +215,13 @@ export const dummyModules = [
         _id: "665000000000000000000209",
         courseId: "665000000000000000000102",
         title: "Send bestilling til Modulex",
-        description: "Lær hvordan du kontrollerer og sender en færdig bestilling.",
+        description: "LÃ¦r hvordan du kontrollerer og sender en fÃ¦rdig bestilling.",
         order: 4,
         duration: "6 min",
         materials: [
             {
                 type: "pdf",
-                title: "Tjekliste før bestilling",
+                title: "Tjekliste fÃ¸r bestilling",
                 fileUrl: "/files/tjekliste-bestilling.pdf",
                 size: "1.1 MB",
             },
@@ -177,13 +233,13 @@ export const dummyModules = [
         _id: "665000000000000000000210",
         courseId: "665000000000000000000102",
         title: "Typiske fejl i bestillingsflowet",
-        description: "Se de mest almindelige fejl og hvordan du undgår dem.",
+        description: "Se de mest almindelige fejl og hvordan du undgÃ¥r dem.",
         order: 5,
         duration: "9 min",
         materials: [
             {
                 type: "video",
-                title: "Undgå fejl i bestillingen",
+                title: "UndgÃ¥ fejl i bestillingen",
                 url: "https://www.youtube.com/embed/dQw4w9WgXcQ",
                 duration: "9 min",
             },
@@ -192,7 +248,6 @@ export const dummyModules = [
         updatedAt: "2026-05-20T10:00:00.000Z",
     },
 
-    // COURSE 3: Brand Guidelines
     {
         _id: "665000000000000000000203",
         courseId: "665000000000000000000103",
@@ -215,7 +270,7 @@ export const dummyModules = [
         _id: "665000000000000000000211",
         courseId: "665000000000000000000103",
         title: "Logo og korrekt brug",
-        description: "Gennemgang af hvordan Modulex-logoet må bruges i materialer.",
+        description: "Gennemgang af hvordan Modulex-logoet mÃ¥ bruges i materialer.",
         order: 2,
         duration: "6 min",
         materials: [
@@ -233,7 +288,8 @@ export const dummyModules = [
         _id: "665000000000000000000212",
         courseId: "665000000000000000000103",
         title: "Farver og typografi",
-        description: "Introduktion til Modulex farver, typografi og grafiske principper.",
+        description:
+            "Introduktion til Modulex farver, typografi og grafiske principper.",
         order: 3,
         duration: "7 min",
         materials: [
@@ -283,7 +339,7 @@ export const dummySurvey = {
     _id: "665000000000000000000301",
     title: "Intro survey",
     description:
-        "Bruges til at forstå partnerens behov før kursusforløbet starter.",
+        "Bruges til at forstÃ¥ partnerens behov fÃ¸r kursusforlÃ¸bet starter.",
     questions: [
         {
             id: "q1",
@@ -301,7 +357,7 @@ export const dummySurvey = {
         },
         {
             id: "q3",
-            label: "Hvad vil I helst lære først?",
+            label: "Hvad vil I helst lÃ¦re fÃ¸rst?",
             type: "textarea",
             required: false,
         },
