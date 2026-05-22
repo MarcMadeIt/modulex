@@ -7,7 +7,8 @@
             </div>
 
             <button class="create-course-btn"
-                    type="button">
+                    type="button"
+                    @click="showCreateCourseModal= true">
                 Opret kursus
             </button>
         </div>
@@ -140,6 +141,10 @@
                 </footer>
             </div>
         </div>
+        <AdminCreateCourseForm
+    v-if="showCreateCourseModal"
+    @close="showCreateCourseModal = false"
+/>
     </div>
 </template>
 
@@ -147,6 +152,7 @@
     import { computed, ref } from "vue";
 
     import AppCard from "../../components/ui/AppCard.vue";
+    import AdminCreateCourseForm from "./AdminCreateCourseForm.vue";
 
     import {
         Users,
@@ -180,6 +186,7 @@
     const selectedCourseIds = ref([]);
     const courseSearch = ref("");
     const refreshKey = ref(0);
+    const showCreateCourseModal = ref(false);
 
     const filteredCourses = computed(() => {
         const search = courseSearch.value.toLowerCase().trim();

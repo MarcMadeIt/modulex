@@ -419,7 +419,7 @@ export function resetDummyData() {
     return initialData;
 }
 
-
+/*
 export function assignCoursesToPartner(partnerId, courseIds) {
     const data = getData();
 
@@ -444,3 +444,4 @@ export function getAssignedCoursesForPartner(partnerId) {
 
     return data.courseAssignments[partnerId] || [];
 }
+*/
