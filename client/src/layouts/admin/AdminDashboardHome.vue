@@ -10,7 +10,7 @@
                 <button class="create-lead-btn"
                         type="button"
                         @click="openCreateLeadModal">
-                    + Opret lead / kunde
+                    + Send spørgeskema
                 </button>
 
                 <button class="create-course-btn"
