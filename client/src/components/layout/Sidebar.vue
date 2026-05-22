@@ -36,6 +36,7 @@
         {
             label: 'Indstillinger',
             path: '/settings'
+            
         }
     ]
 </script>
