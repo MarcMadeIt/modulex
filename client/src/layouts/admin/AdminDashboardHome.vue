@@ -27,7 +27,7 @@
                     <Users :size="20" />
                 </div>
 
-                <p>AKTIVE PARTNERE</p>
+                <p>KLAR TIL KURSUS</p>
                 <h2>{{ partners.length }}</h2>
             </AppCard>
 
@@ -36,7 +36,7 @@
                     <BookOpen :size="20" />
                 </div>
 
-                <p>AKTIVE KURSER</p>
+                <p>IGANGVÆRENDE KURSUS</p>
                 <h2>{{ courses.length }}</h2>
             </AppCard>
 
@@ -60,7 +60,7 @@
                     <button type="button"
                             :class="{ 'admin-tab-active': activeTab === 'partners' }"
                             @click="activeTab = 'partners'">
-                        Aktive partnere ({{ filteredPartners.length }})
+                        Klar til kursus ({{ filteredPartners.length }})
                     </button>
 
                     <button type="button"
