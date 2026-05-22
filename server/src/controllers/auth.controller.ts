@@ -4,6 +4,22 @@ import { User } from "../models/User";
 import jwt from "jsonwebtoken";
 import { AuthRequest } from "../middleware/auth.middleware";
 
+const COOKIE_NAME = "token";
+
+const cookieOptions = {
+  httpOnly: true, // JS kan ikke læse den → XSS-sikker
+  secure: process.env.NODE_ENV === "production", // kun HTTPS i prod (false i dev)
+  sameSite: "lax" as const, // "none" + secure:true hvis frontend/backend er på forskellige domæner
+  maxAge: 60 * 60 * 1000, // 1 time — matcher JWT expiresIn
+};
+
+const signToken = (user: { _id: unknown; role: string }) =>
+  jwt.sign(
+    { userId: user._id, role: user.role },
+    process.env.JWT_SECRET as string,
+    { expiresIn: "1h" },
+  );
+
 const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/;
 
 export const signup = async (req: Request, res: Response) => {
@@ -50,6 +66,13 @@ export const signup = async (req: Request, res: Response) => {
 
     await user.save();
 
+    user.password = hashedPassword;
+    user.status = "active";
+    await user.save();
+
+    // Auto-login: sæt token i httpOnly-cookie
+    res.cookie(COOKIE_NAME, signToken(user), cookieOptions);
+
     return res.status(200).json({
       message: "Password created successfully. User is now active.",
       user: {
@@ -78,35 +101,20 @@ export const login = async (req: Request, res: Response) => {
     const user = await User.findOne({ email });
 
     if (!user || !user.password) {
-      return res.status(401).json({
-        message: "Invalid email or password",
-      });
+      return res.status(401).json({ message: "Invalid email or password" });
     }
 
     // verify password
     const isPasswordValid = await argon2.verify(user.password, password);
-
     if (!isPasswordValid) {
-      return res.status(401).json({
-        message: "Invalid email or password",
-      });
+      return res.status(401).json({ message: "Invalid email or password" });
     }
 
-    // create JWT token
-    const token = jwt.sign(
-      {
-        userId: user._id,
-        role: user.role,
-      },
-      process.env.JWT_SECRET as string,
-      {
-        expiresIn: "1h",
-      },
-    );
+    // Sæt token i httpOnly-cookie
+    res.cookie(COOKIE_NAME, signToken(user), cookieOptions);
 
     return res.status(200).json({
       message: "Login successful",
-      token,
       user: {
         id: user._id,
         email: user.email,
@@ -131,7 +139,6 @@ export const getMe = async (req: AuthRequest, res: Response) => {
 };
 
 export const logout = async (req: Request, res: Response) => {
-  res.json({
-    message: "Logout controller works",
-  });
+  res.clearCookie(COOKIE_NAME, cookieOptions);
+  res.json({ message: "Logged out" });
 };
