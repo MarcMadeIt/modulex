@@ -58,21 +58,21 @@
             ></iframe>
           </template>
 
-          
+          <template
+            v-else-if="currentStep.type === 'pdf' && currentStep.fileUrl"
+          >
+            <iframe
+              class="course-pdf"
+              :src="currentStep.fileUrl"
+              title="Kursus PDF"
+            ></iframe>
+          </template>
 
           <template v-else-if="currentStep.type === 'pdf'">
-  <div class="content-placeholder-icon">📄</div>
-
-  <p>{{ currentStep.title }}</p>
-
-  <a
-    :href="currentStep.fileUrl"
-    target="_blank"
-    class="pdf-link"
-  >
-    Åbn PDF
-  </a>
-</template>
+            <div class="content-placeholder-icon">📄</div>
+            <p>{{ currentStep.title }}</p>
+            <small>PDF mangler eller fileUrl er ikke sat</small>
+          </template>
 
           <template v-else>
             <div class="content-placeholder-icon">▤</div>
@@ -189,17 +189,17 @@ onMounted(() => {
     id: foundCourse.id,
     title: foundCourse.title,
     items: foundCourse.modules.flatMap((module) => {
-  return (module.materials || []).map((material) => {
-    return {
-      title: module.title,
-      description: module.description,
-      type: material.type,
-      url: material.url,
-      fileUrl: material.fileUrl,
-      duration: material.duration,
-    };
-  });
-}),
+      return (module.materials || []).map((material) => {
+        return {
+          title: module.title,
+          description: module.description,
+          type: material.type,
+          url: material.url,
+          fileUrl: material.fileUrl,
+          duration: material.duration,
+        };
+      });
+    }),
   };
 
   if (course.value.items.length === 0) {
@@ -494,5 +494,11 @@ function exitCourse() {
   padding: 0.45rem 0.85rem;
 }
 
-
+.course-pdf {
+  width: 100%;
+  height: 100%;
+  border: none;
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-paper);
+}
 </style>

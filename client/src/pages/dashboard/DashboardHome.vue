@@ -12,7 +12,9 @@
           dine åbne moduler for at få adgang til bestillingsportalen.
         </p>
 
-        <AppButton arrow @click="goToFirstCourse"> Fortsæt træning </AppButton>
+        <AppButton @click="goToFirstCourse">
+          Fortsæt træning <ArrowRight :size="16"
+        /></AppButton>
       </div>
 
       <div class="dashboard-hero-pattern">
@@ -106,7 +108,7 @@
           </div>
 
           <div class="card-actions">
-            <AppButton variant="text" arrow>
+            <AppButton variant="text">
               {{
                 course.completed
                   ? "Gense"
@@ -114,6 +116,8 @@
                     ? "Fortsæt"
                     : "Start"
               }}
+
+              <ChevronRight :size="16" />
             </AppButton>
           </div>
         </AppCard>
@@ -256,7 +260,14 @@ import {
   dummyUserProgresses,
 } from "../../data/dummyData.js";
 
-import { BookOpen, Clock3, CircleCheck, GraduationCap } from "lucide-vue-next";
+import {
+  BookOpen,
+  Clock3,
+  CircleCheck,
+  GraduationCap,
+  ChevronRight,
+  ArrowRight,
+} from "lucide-vue-next";
 
 const router = useRouter();
 
