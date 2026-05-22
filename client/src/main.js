@@ -2,9 +2,8 @@ import { createApp } from 'vue'
 import './assets/css/main.css'
 import App from './App.vue'
 import router from './router'
+import { auth } from "./stores/auth";
 
-//createApp(App).mount('#app')
+auth.fetchMe().finally(() => {  createApp(App).use(router).mount("#app");});
 
-//App.use(router)
 
-createApp(App).use(router).mount('#app')
