@@ -77,6 +77,11 @@
                        placeholder="Søg efter navn, virksomhed eller mail..." />
             </div>
 
+            <div v-if="loadError"
+                 class="dashboard-error">
+                {{ loadError }}
+            </div>
+
             <template v-if="activeTab === 'partners'">
                 <div class="table-header">
                     <span>Partner</span>
@@ -109,11 +114,20 @@
                         SE SVAR
                     </button>
 
-                    <button class="approve-btn"
-                            type="button"
-                            @click="openAssignModal(partner)">
-                        Tildel kurser
-                    </button>
+                    <div class="lead-action-buttons">
+                        <button class="survey-btn"
+                                type="button"
+                                @click="openAssignModal(partner)">
+                            Tildel kurser
+                        </button>
+
+                        <button class="approve-btn"
+                                type="button"
+                                :disabled="getAssignedCourseCount(partner.id) === 0"
+                                @click="activateLeadAndSendCourses(partner)">
+                            Aktiver kunde / send kurser
+                        </button>
+                    </div>
                 </div>
 
                 <div v-if="filteredPartners.length === 0"
@@ -134,17 +148,7 @@
                      v-for="lead in filteredLeads"
                      :key="lead.id">
                     <div class="partner-info">
-                        <strong>{{ getLeadDisplayName(lead) }}</strong>
-
-                        <p>Mail: {{ lead.email }}</p>
-
-                        <p v-if="getLeadDisplayCompany(lead)">
-                            Virksomhed: {{ getLeadDisplayCompany(lead) }}
-                        </p>
-
-                        <small v-if="getAssignedCourseCount(lead.id) > 0">
-                            {{ getAssignedCourseCount(lead.id) }} kursus/kurser tildelt
-                        </small>
+                        <strong>{{ lead.email }}</strong>
                     </div>
 
                     <span class="status"
@@ -152,51 +156,14 @@
                         {{ lead.status }}
                     </span>
 
-                    <div class="lead-progress">
-                        <div class="lead-progress-bar">
-                            <div class="lead-progress-fill"
-                                 :style="{ width: lead.surveyProgress + '%' }"></div>
-                        </div>
+                    <span class="lead-waiting-text">Afventer svar</span>
 
-                        <small>{{ lead.surveyProgress }}% udfyldt</small>
-
-                        <button v-if="hasSurveyAnswers(lead)"
-                                class="survey-btn"
-                                type="button"
-                                @click="openSurveyAnswers(lead)">
-                            SE SVAR
-                        </button>
-                    </div>
-
-                    <div class="lead-actions">
-                        <button v-if="!hasSurveyAnswers(lead)"
-                                class="approve-btn"
-                                type="button"
-                                @click="handleLeadAction(lead)">
-                            {{ lead.action }}
-                        </button>
-
-                        <div v-else
-                             class="lead-action-buttons">
-                            <button class="survey-btn"
-                                    type="button"
-                                    @click="openAssignModal(lead)">
-                                Tildel kurser
-                            </button>
-
-                            <button class="approve-btn"
-                                    type="button"
-                                    :disabled="getAssignedCourseCount(lead.id) === 0"
-                                    @click="activateLeadAndSendCourses(lead)">
-                                Aktiver kunde / send kurser
-                            </button>
-                        </div>
-                    </div>
+                    <span class="lead-waiting-text">—</span>
                 </div>
 
                 <div v-if="filteredLeads.length === 0"
                      class="empty-state">
-                    Ingen leads matcher din søgning.
+                    Ingen leads i gang lige nu.
                 </div>
             </template>
         </div>
@@ -319,7 +286,7 @@
 </template>
 
 <script setup>
-    import { computed, ref } from "vue";
+    import { computed, onMounted, ref } from "vue";
 
     import AppCard from "../../components/ui/AppCard.vue";
     import CreateLeadModal from "./CreateLeadModal.vue";
@@ -331,32 +298,43 @@
         TrendingUp,
     } from "lucide-vue-next";
 
-    import {
-        dummyPartners,
-        dummyLeads,
-        dummyCourseAssignments,
-    } from "../../data/dummyData.js";
+    import { dummyCourseAssignments } from "../../data/dummyData.js";
 
     import { getCourses } from "../../data/dummyCourseService.js";
 
+    const API_URL = import.meta.env.VITE_API_URL;
+
     const ASSIGNMENTS_KEY = "modulex_course_assignments";
-    const LEADS_KEY = "modulex_dummy_leads";
-    const PARTNERS_KEY = "modulex_dummy_partners";
+
+    // Map fra DB-status til dashboardets visning.
+    const STATUS_LABELS = {
+        pending_survey: "Survey sendt",
+        pending_approval: "Klar til kursus",
+        pending_activation: "Afventer aktivering",
+        active: "Aktiv",
+    };
+
+    const STATUS_CLASSES = {
+        pending_survey: "waiting",
+        pending_approval: "lead-ready",
+        pending_activation: "lead-ready",
+        active: "active",
+    };
 
     const activeTab = ref("partners");
     const searchQuery = ref("");
 
     const courses = ref(getCourses());
 
-    const partners = ref(getSavedPartners());
-    const leads = ref(getSavedLeads());
+    const partners = ref([]);
+    const leads = ref([]);
+    const loadError = ref("");
 
     const showAssignModal = ref(false);
     const selectedPartner = ref(null);
     const selectedCourseIds = ref([]);
     const courseSearch = ref("");
     const refreshKey = ref(0);
-    const showCreateCourseModal = ref(false);
 
     const showCreateLeadModal = ref(false);
     const showCreateCourseForm = ref(false);
@@ -409,41 +387,50 @@
         });
     });
 
-    function hasSurveyAnswers(lead) {
-        return lead.hasSurveyAnswers || lead.surveyProgress === 100;
-    }
-
-    function getLeadDisplayName(lead) {
-        if (hasSurveyAnswers(lead) && lead.name) {
-            return lead.name;
-        }
-
-        return lead.email;
-    }
-
-    function getLeadDisplayCompany(lead) {
-        if (hasSurveyAnswers(lead) && lead.company) {
-            return lead.company;
-        }
-
-        return "";
-    }
-
-    function normalizeLead(lead) {
+    function mapUser(user) {
         return {
-            id: lead.id || crypto.randomUUID(),
-            email: lead.email || "",
-            name: lead.name || "",
-            company: lead.company || "",
-            status: lead.status || "Survey sendt",
-            statusClass: lead.statusClass || "waiting",
-            surveyProgress: lead.surveyProgress ?? 35,
-            action: lead.action || "Simuler svar",
-            surveySent: lead.surveySent ?? true,
-            hasSurveyAnswers:
-                lead.hasSurveyAnswers ?? lead.surveyProgress === 100,
+            id: user._id,
+            email: user.email,
+            name: user.contactPerson || user.companyName || user.email,
+            company: user.companyName || "",
+            contactPerson: user.contactPerson || "",
+            status: STATUS_LABELS[user.status] || user.status,
+            statusClass: STATUS_CLASSES[user.status] || "waiting",
+            rawStatus: user.status,
         };
     }
+
+    async function loadUsers() {
+        loadError.value = "";
+
+        try {
+            const res = await fetch(`${API_URL}/admin/customers`, {
+                credentials: "include",
+            });
+
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+            const data = await res.json();
+            const users = Array.isArray(data.users) ? data.users : [];
+
+            // Igangværende = survey sendt, afventer svar.
+            leads.value = users
+                .filter((u) => u.status === "pending_survey")
+                .map(mapUser);
+
+            // Klar til kursus = survey udfyldt, klar til kursustildeling.
+            partners.value = users
+                .filter((u) =>
+                    ["pending_approval", "pending_activation"].includes(u.status)
+                )
+                .map(mapUser);
+        } catch (err) {
+            loadError.value = "Kunne ikke hente brugere fra serveren.";
+            console.error("Kunne ikke hente brugere", err);
+        }
+    }
+
+    onMounted(loadUsers);
 
     function refreshCourses() {
         courses.value = getCourses();
@@ -458,50 +445,6 @@
         refreshCourses();
     }
 
-    function getSavedPartners() {
-        const savedPartners = localStorage.getItem(PARTNERS_KEY);
-
-        if (savedPartners) return JSON.parse(savedPartners);
-
-        localStorage.setItem(PARTNERS_KEY, JSON.stringify(dummyPartners));
-
-        return [...dummyPartners];
-    }
-
-    function savePartners() {
-        localStorage.setItem(PARTNERS_KEY, JSON.stringify(partners.value));
-    }
-
-    function getSavedLeads() {
-        const savedLeads = localStorage.getItem(LEADS_KEY);
-
-        if (savedLeads) {
-            return JSON.parse(savedLeads).map((lead) => normalizeLead(lead));
-        }
-
-        const initialLeads = dummyLeads.map((lead) => {
-            return normalizeLead({
-                ...lead,
-                name: "",
-                company: "",
-                status: "Survey sendt",
-                statusClass: "waiting",
-                surveyProgress: 35,
-                action: "Simuler svar",
-                surveySent: true,
-                hasSurveyAnswers: false,
-            });
-        });
-
-        localStorage.setItem(LEADS_KEY, JSON.stringify(initialLeads));
-
-        return initialLeads;
-    }
-
-    function saveLeads() {
-        localStorage.setItem(LEADS_KEY, JSON.stringify(leads.value));
-    }
-
     function openCreateLeadModal() {
         showCreateLeadModal.value = true;
     }
@@ -510,66 +453,23 @@
         showCreateLeadModal.value = false;
     }
 
-    function handleLeadCreated(newLeads) {
-        const leadsToAdd = Array.isArray(newLeads) ? newLeads : [newLeads];
-
-        const normalizedLeads = leadsToAdd
-            .map((lead) => normalizeLead(lead))
-            .filter((lead) => {
-                return !leads.value.some(
-                    (existingLead) =>
-                        existingLead.email.toLowerCase() === lead.email.toLowerCase()
-                );
-            });
-
-        leads.value.unshift(...normalizedLeads);
-
-        saveLeads();
-
+    function handleLeadCreated() {
+        // Leads er netop sendt + gemt i DB -> hent listerne på ny.
+        loadUsers();
         activeTab.value = "leads";
     }
 
-    function handleLeadAction(lead) {
-        if (lead.action === "Simuler svar") {
-            const emailName = lead.email.split("@")[0];
-            const emailDomain = lead.email.split("@")[1] || "ukendt.dk";
-
-            lead.name = emailName;
-            lead.company = emailDomain;
-            lead.status = "Survey besvaret";
-            lead.statusClass = "lead-ready";
-            lead.surveyProgress = 100;
-            lead.action = "Afventer kursustildeling";
-            lead.hasSurveyAnswers = true;
-
-            saveLeads();
-        }
-    }
-
-    function activateLeadAndSendCourses(lead) {
-        const assignedCourseCount = getAssignedCourseCount(lead.id);
+    function activateLeadAndSendCourses(partner) {
+        const assignedCourseCount = getAssignedCourseCount(partner.id);
 
         if (assignedCourseCount === 0) {
             alert("Du skal først tildele mindst ét kursus til kunden.");
             return;
         }
 
-        partners.value.unshift({
-            id: lead.id,
-            name: lead.name || lead.email,
-            email: lead.email,
-            company: lead.company || "Ikke angivet",
-            status: "I gang",
-            statusClass: "active",
-            action: "Tildel kurser",
-        });
-
-        leads.value = leads.value.filter((item) => item.id !== lead.id);
-
-        savePartners();
-        saveLeads();
-
-        activeTab.value = "partners";
+        // Optimistisk: fjern fra "Klar til kursus" i visningen.
+        // DB-baseret aktivering (status -> active) er en senere opgave.
+        partners.value = partners.value.filter((item) => item.id !== partner.id);
     }
 
     function openSurveyAnswers(person) {
@@ -933,6 +833,17 @@
         padding: 32px;
         color: #777;
         text-align: center;
+    }
+
+    .lead-waiting-text {
+        color: #999;
+        font-size: 13px;
+    }
+
+    .dashboard-error {
+        color: #ff4d26;
+        font-weight: 700;
+        padding: 12px 0;
     }
 
     .assign-modal-overlay {

@@ -6,6 +6,7 @@ import { Module } from "../models/Module";
 import { UserCourse } from "../models/UserCourse";
 import { UserProgress } from "../models/UserProgress";
 import { AuthRequest } from "../middleware/auth.middleware";
+import { sendSurveyEmail } from "../utils/email";
 
 export const getCustomers = async (req: AuthRequest, res: Response) => {
   try {
@@ -186,5 +187,70 @@ export const getCustomerById = async (req: AuthRequest, res: Response) => {
     return res.status(200).json({ user });
   } catch {
     return res.status(500).json({ message: "Failed to fetch customer" });
+  }
+};
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+export const sendSurvey = async (req: AuthRequest, res: Response) => {
+  try {
+    const { emails } = req.body as { emails?: unknown };
+
+    if (!Array.isArray(emails) || emails.length === 0) {
+      return res.status(400).json({ message: "emails must be a non-empty array" });
+    }
+
+    // Normalisér, valider og fjern dubletter.
+    const normalized = [
+      ...new Set(
+        emails
+          .map((e) => String(e).trim().toLowerCase())
+          .filter((e) => EMAIL_REGEX.test(e)),
+      ),
+    ];
+
+    if (normalized.length === 0) {
+      return res.status(400).json({ message: "No valid emails provided" });
+    }
+
+    const results = await Promise.allSettled(
+      normalized.map(async (email) => {
+        // Upsert som lead. $setOnInsert sikrer at en eksisterende bruger
+        // (fx en allerede aktiv kunde) ikke nedgraderes ved gen-afsendelse.
+        await User.findOneAndUpdate(
+          { email },
+          { $setOnInsert: { email, role: "client", status: "pending_survey" } },
+          { upsert: true, setDefaultsOnInsert: true },
+        );
+        await sendSurveyEmail(email);
+      }),
+    );
+
+    const failed: string[] = [];
+    let lastError = "";
+    results.forEach((result, i) => {
+      if (result.status === "rejected") {
+        lastError = result.reason?.message || String(result.reason);
+        console.error(`Failed to send survey to ${normalized[i]}:`, result.reason);
+        failed.push(normalized[i]);
+      }
+    });
+
+    const sent = normalized.length - failed.length;
+
+    // Hvis intet kunne sendes (typisk forkerte SMTP-credentials) -> fejl tydeligt,
+    // så frontenden ikke fejlagtigt viser succes.
+    if (sent === 0) {
+      return res.status(502).json({
+        message: `Kunne ikke sende mail. Tjek SMTP-opsætningen i .env. (${lastError})`,
+        sent,
+        failed,
+      });
+    }
+
+    return res.status(200).json({ sent, failed });
+  } catch (err) {
+    console.error("Send survey error:", err);
+    return res.status(500).json({ message: "Failed to send survey" });
   }
 };
