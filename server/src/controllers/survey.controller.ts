@@ -1,15 +1,10 @@
 import { Request, Response } from "express";
 import { User } from "../models/User";
-import { SurveyResponse } from "../models/SurveyResponse";
-
-export const submitSurvey = async (req: Request, res: Response) => {
-  try {
-    const { email, companyName, contactPerson, phone, answers } = req.body;
 import { SurveyResponse, IAnswer } from "../models/SurveyResponse";
 
 export const submitSurvey = async (req: Request, res: Response) => {
   try {
-    const { email, phone, answers } = req.body;
+    const { email, companyName, contactPerson, phone, answers } = req.body;
 
     const existing = await User.findOne({ email });
     if (existing) {
