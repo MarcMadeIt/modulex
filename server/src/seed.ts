@@ -12,6 +12,8 @@ async function seed() {
     { email: "admin@example.com" },
     {
       email: "admin@example.com",
+      companyName: "Admin",
+      contactPerson: "Admin",
       phone: "+00 00 00 00 00",
       password,
       role: "admin",

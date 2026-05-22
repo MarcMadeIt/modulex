@@ -30,63 +30,75 @@
 
           <!-- Contact Form -->
           <div class="contact-form-wrapper">
-            <form @submit.prevent="handleContactSubmit">
-              <div class="form-group">
-                <label class="input-label" for="contact-company">Virksomhedsnavn</label>
-                <input
-                  id="contact-company"
-                  v-model="contactForm.companyName"
-                  type="text"
-                  class="input"
-                  placeholder="Navn på virksomhed"
-                  required
-                />
+            <template v-if="contactSuccess">
+              <div class="contact-confirmation">
+                <div class="confirmation-icon">✓</div>
+                <h3>Tak — dine oplysninger er sendt</h3>
+                <p>
+                  Vi har modtaget dine kontaktoplysninger og vender tilbage til dig snarest.
+                </p>
               </div>
+            </template>
 
-              <div class="form-group">
-                <label class="input-label" for="contact-person">Kontaktperson</label>
-                <input
-                  id="contact-person"
-                  v-model="contactForm.contactPerson"
-                  type="text"
-                  class="input"
-                  placeholder="Dit navn"
-                  required
-                />
+            <template v-else>
+              <form @submit.prevent="handleContactSubmit">
+                <div class="form-group">
+                  <label class="input-label" for="contact-company">Virksomhedsnavn</label>
+                  <input
+                    id="contact-company"
+                    v-model="contactForm.companyName"
+                    type="text"
+                    class="input"
+                    placeholder="Navn på virksomhed"
+                    required
+                  />
+                </div>
+
+                <div class="form-group">
+                  <label class="input-label" for="contact-person">Kontaktperson</label>
+                  <input
+                    id="contact-person"
+                    v-model="contactForm.contactPerson"
+                    type="text"
+                    class="input"
+                    placeholder="Dit navn"
+                    required
+                  />
+                </div>
+
+                <div class="form-group">
+                  <label class="input-label" for="contact-email">Email</label>
+                  <input
+                    id="contact-email"
+                    v-model="contactForm.email"
+                    type="email"
+                    class="input"
+                    placeholder="din@email.dk"
+                    required
+                  />
+                </div>
+
+                <div class="form-group">
+                  <label class="input-label" for="contact-phone">Telefon</label>
+                  <input
+                    id="contact-phone"
+                    v-model="contactForm.phone"
+                    type="tel"
+                    class="input"
+                    placeholder="+45 12 34 56 78"
+                    required
+                  />
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-full">
+                  Afslut
+                </button>
+              </form>
+
+              <div v-if="contactError" class="error-box">
+                {{ contactError }}
               </div>
-
-              <div class="form-group">
-                <label class="input-label" for="contact-email">Email</label>
-                <input
-                  id="contact-email"
-                  v-model="contactForm.email"
-                  type="email"
-                  class="input"
-                  placeholder="din@email.dk"
-                  required
-                />
-              </div>
-
-              <div class="form-group">
-                <label class="input-label" for="contact-phone">Telefon</label>
-                <input
-                  id="contact-phone"
-                  v-model="contactForm.phone"
-                  type="tel"
-                  class="input"
-                  placeholder="+45 12 34 56 78"
-                  required
-                />
-              </div>
-
-              <button type="submit" class="btn btn-primary btn-full">
-                Afslut
-              </button>
-            </form>
-
-            <div v-if="contactError" class="error-box">
-              {{ contactError }}
-            </div>
+            </template>
           </div>
 
           <div class="survey-footer">
@@ -167,6 +179,7 @@ const loading = ref(true);
 const completed = ref(false);
 const error = ref<string | null>(null);
 const contactError = ref<string | null>(null);
+const contactSuccess = ref(false);
 
 const contactForm = ref({
   companyName: "",
@@ -210,6 +223,7 @@ async function handleAnswer(option: string) {
 
 async function handleContactSubmit() {
   contactError.value = null;
+  contactSuccess.value = false;
 
   try {
     const response = await fetch(`${API_URL}/survey`, {
@@ -231,6 +245,7 @@ async function handleContactSubmit() {
 
     const data = await response.json();
     console.log("Survey submitted:", data);
+    contactSuccess.value = true;
   } catch (err: any) {
     contactError.value = err.message || "Noget gik galt";
     console.error("Kunne ikke submit survey", err);
@@ -346,6 +361,36 @@ async function handleContactSubmit() {
 
 .survey-footer-item.active {
   color: var(--color-primary-medium);
+}
+
+.contact-confirmation {
+  padding: var(--space-7);
+  text-align: center;
+}
+
+.contact-confirmation .confirmation-icon {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto var(--space-4);
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(16, 185, 129, 0.12);
+  color: var(--color-primary-green);
+  font-size: 2rem;
+}
+
+.contact-confirmation h3 {
+  margin-bottom: var(--space-3);
+  font-size: 1.8rem;
+  color: var(--color-text-primary);
+}
+
+.contact-confirmation p {
+  max-width: 620px;
+  margin: 0 auto;
+  color: var(--color-primary-medium);
+  font-size: 1rem;
 }
 
 .survey-completed {

@@ -1,7 +1,9 @@
 ﻿import {
+    dummyPartners,
     dummyCourses,
     dummyModules,
     dummyUserProgresses,
+    dummyCourseAssignments,
     dummySurvey,
 } from "./dummyData.js";
 
@@ -10,9 +12,11 @@ const CURRENT_USER_ID = "665000000000000000000002";
 
 function createInitialData() {
     return {
+        partners: dummyPartners,
         courses: dummyCourses,
         modules: dummyModules,
         userProgresses: dummyUserProgresses,
+        courseAssignments: dummyCourseAssignments,
         survey: dummySurvey,
     };
 }
@@ -38,17 +42,17 @@ function makeId() {
     return crypto.randomUUID();
 }
 
-function mapCoursesForFrontend(data) {
-    return data.courses.map((course, index) => {
+function mapCoursesForFrontend(data, coursesToMap = data.courses) {
+    return coursesToMap.map((course, index) => {
         const progressData = data.userProgresses.find(
             (progress) =>
                 progress.courseId === course._id &&
                 progress.userId === CURRENT_USER_ID
         );
 
-        const courseModules = data.modules.filter(
-            (module) => module.courseId === course._id
-        );
+        const courseModules = data.modules
+            .filter((module) => module.courseId === course._id)
+            .sort((a, b) => a.order - b.order);
 
         const progress = progressData ? progressData.progress : 0;
 
@@ -67,16 +71,14 @@ function mapCoursesForFrontend(data) {
 
 /*
   API SENERE:
-  Denne metode skal senere erstattes med:
+  Denne metode kan senere erstattes med:
 
   const response = await fetch("/api/courses");
-  const courses = await response.json();
-
-  Hvis I også skal hente progress:
-  const progressResponse = await fetch("/api/progress/me");
+  return await response.json();
 */
 export function getCourses() {
     const data = getData();
+
     return mapCoursesForFrontend(data);
 }
 
@@ -89,6 +91,7 @@ export function getCourses() {
 */
 export function getCourseById(courseId) {
     const courses = getCourses();
+
     return courses.find((course) => course.id === courseId);
 }
 
@@ -96,15 +99,116 @@ export function getCourseById(courseId) {
   API SENERE:
   Denne metode kan senere erstattes med:
 
-  await fetch(`/api/progress/modules/${moduleId}/complete`, {
+  const response = await fetch("/api/admin/customers");
+  return await response.json();
+*/
+export function getPartners() {
+    const data = getData();
+
+    return data.partners;
+}
+
+/*
+  API SENERE:
+  Denne metode kan senere erstattes med:
+
+  await fetch(`/api/admin/customers/${partnerId}/approve`, {
+    method: "PATCH"
+  });
+*/
+export function approvePartner(partnerId) {
+    const data = getData();
+
+    const partner = data.partners.find((item) => item.id === partnerId);
+
+    if (!partner) {
+        return null;
+    }
+
+    partner.status = "I gang";
+    partner.statusClass = "active";
+    partner.action = "Tildel kurser";
+
+    saveData(data);
+
+    return partner;
+}
+
+/*
+  API SENERE:
+  Denne metode kan senere erstattes med:
+
+  await fetch("/api/admin/assign-course", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`
-    }
+    },
+    body: JSON.stringify({
+      userId: partnerId,
+      courseIds
+    })
   });
+*/
+export function assignCoursesToPartner(partnerId, courseIds) {
+    const data = getData();
 
-  Eller hvis jeres backend arbejder direkte på course progress:
+    data.courseAssignments[partnerId] = courseIds;
+
+    saveData(data);
+
+    return data.courseAssignments[partnerId];
+}
+
+/*
+  API SENERE:
+  Denne metode kan senere erstattes med:
+
+  const response = await fetch(`/api/admin/customers/${partnerId}/courses`);
+  return await response.json();
+*/
+export function getAssignedCoursesForPartner(partnerId) {
+    const data = getData();
+
+    return data.courseAssignments[partnerId] || [];
+}
+
+export function getAssignedCourseObjectsForPartner(partnerId) {
+    const data = getData();
+
+    const assignedCourseIds = data.courseAssignments[partnerId] || [];
+
+    const assignedCourses = data.courses.filter((course) =>
+        assignedCourseIds.includes(course._id)
+    );
+
+    return mapCoursesForFrontend(data, assignedCourses);
+}
+
+/*
+  Bruges på partnerens dashboard.
+  Lige nu er CURRENT_USER_ID hardcoded.
+  Senere skal den komme fra login/auth.
+*/
+export function getCoursesForCurrentUser() {
+    const data = getData();
+
+    const assignedCourseIds = data.courseAssignments[CURRENT_USER_ID] || [];
+
+    if (assignedCourseIds.length === 0) {
+        return mapCoursesForFrontend(data);
+    }
+
+    const assignedCourses = data.courses.filter((course) =>
+        assignedCourseIds.includes(course._id)
+    );
+
+    return mapCoursesForFrontend(data, assignedCourses);
+}
+
+/*
+  API SENERE:
+  Denne metode kan senere erstattes med:
 
   await fetch(`/api/progress/courses/${courseId}/complete`, {
     method: "POST"
@@ -143,7 +247,7 @@ export function completeCourse(courseId) {
 
     saveData(data);
 
-    return mapCoursesForFrontend(data);
+    return getCoursesForCurrentUser();
 }
 
 /*
@@ -186,7 +290,7 @@ export function updateCourseProgress(courseId, progressValue) {
 
     saveData(data);
 
-    return mapCoursesForFrontend(data);
+    return getCoursesForCurrentUser();
 }
 
 /*
@@ -278,13 +382,20 @@ export function deleteCourse(courseId) {
 
     data.courses = data.courses.filter((course) => course._id !== courseId);
     data.modules = data.modules.filter((module) => module.courseId !== courseId);
+
     data.userProgresses = data.userProgresses.filter(
         (progress) => progress.courseId !== courseId
     );
 
+    Object.keys(data.courseAssignments).forEach((partnerId) => {
+        data.courseAssignments[partnerId] = data.courseAssignments[
+            partnerId
+        ].filter((id) => id !== courseId);
+    });
+
     saveData(data);
 
-    return mapCoursesForFrontend(data);
+    return getCourses();
 }
 
 /*
@@ -296,12 +407,41 @@ export function deleteCourse(courseId) {
 */
 export function getSurvey() {
     const data = getData();
+
     return data.survey;
 }
 
 export function resetDummyData() {
     const initialData = createInitialData();
+
     saveData(initialData);
 
     return initialData;
 }
+
+/*
+export function assignCoursesToPartner(partnerId, courseIds) {
+    const data = getData();
+
+    if (!data.courseAssignments) {
+        data.courseAssignments = {};
+    }
+
+    data.courseAssignments[partnerId] = courseIds;
+
+    saveData(data);
+
+    return data.courseAssignments[partnerId];
+}
+
+export function getAssignedCoursesForPartner(partnerId) {
+    const data = getData();
+
+    if (!data.courseAssignments) {
+        data.courseAssignments = {};
+        saveData(data);
+    }
+
+    return data.courseAssignments[partnerId] || [];
+}
+*/

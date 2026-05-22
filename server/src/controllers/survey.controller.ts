@@ -1,5 +1,10 @@
 import { Request, Response } from "express";
 import { User } from "../models/User";
+import { SurveyResponse } from "../models/SurveyResponse";
+
+export const submitSurvey = async (req: Request, res: Response) => {
+  try {
+    const { email, companyName, contactPerson, phone, answers } = req.body;
 import { SurveyResponse, IAnswer } from "../models/SurveyResponse";
 
 export const submitSurvey = async (req: Request, res: Response) => {
@@ -15,10 +20,17 @@ export const submitSurvey = async (req: Request, res: Response) => {
 
     const user = await User.create({
       email,
+      companyName,
+      contactPerson,
       phone,
       status: "pending_approval",
     });
 
+    await SurveyResponse.create({
+      userId: user._id,
+      userEmail: user.email,
+      answers,
+    });
     // The client sends answers as a map { questionId: answer }, but the
     // SurveyResponse schema stores an array of { questionId, answer }.
     const answerList: IAnswer[] = Object.entries(answers ?? {}).map(

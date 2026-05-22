@@ -56,6 +56,9 @@ export const signup = async (req: Request, res: Response) => {
       user: {
         id: user._id,
         email: user.email,
+        companyName: user.companyName,
+        contactPerson: user.contactPerson,
+        phone: user.phone,
         role: user.role,
         status: user.status,
       },
@@ -75,6 +78,7 @@ export const login = async (req: Request, res: Response) => {
     // check if user exists
     const user = await User.findOne({ email });
 
+    if (!user || !user.password) {
     if (!user?.password) {
       return res.status(401).json({
         message: "Invalid email or password",
