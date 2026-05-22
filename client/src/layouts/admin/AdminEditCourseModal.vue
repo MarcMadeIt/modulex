@@ -1,186 +1,223 @@
 ﻿<template>
-    <div class="course-modal-overlay">
-        <div class="course-modal">
-            <header class="course-modal-header">
-                <div>
-                    <h2>
-                        {{ mode === "duplicate" ? "Opret nyt kursus" : "Redigér kursus" }}
-                    </h2>
+  <div class="course-modal-overlay">
+    <div class="course-modal">
+      <header class="course-modal-header">
+        <div>
+          <h2>
+            {{ mode === "duplicate" ? "Opret nyt kursus" : "Redigér kursus" }}
+          </h2>
 
-                    <p>
-                        {{
+          <p>
+            {{
               mode === "duplicate"
                 ? "Kurset er kopieret. Du kan rette indholdet før oprettelse."
                 : "Redigér eksisterende indtastninger og lektioner."
-                        }}
-                    </p>
-                </div>
+            }}
+          </p>
+        </div>
 
-                <button class="course-modal-close"
-                        type="button"
-                        @click="closeModal">
-                    ×
+        <button class="course-modal-close" type="button" @click="closeModal">
+          ×
+        </button>
+      </header>
+
+      <div class="course-modal-body">
+        <section class="form-section">
+          <h3>Kursus info</h3>
+
+          <input
+            v-model="courseTitle"
+            class="input"
+            type="text"
+            placeholder="Kursus titel"
+          />
+
+          <textarea
+            v-model="courseDescription"
+            class="input textarea"
+            placeholder="Kursus beskrivelse"
+          ></textarea>
+        </section>
+
+        <section class="form-section">
+          <h3>Lektioner ({{ lessons.length }})</h3>
+
+          <div
+            v-for="(lesson, lessonIndex) in lessons"
+            :key="lesson.localId"
+            class="lesson-edit-card"
+          >
+            <div class="lesson-edit-top">
+              <div>
+                <strong
+                  >{{ lessonIndex + 1 }}.
+                  {{ lesson.title || "Ny lektion" }}</strong
+                >
+                <small>{{ lesson.materials.length }} materiale(r)</small>
+              </div>
+
+              <div class="lesson-order-actions">
+                <button
+                  type="button"
+                  :disabled="lessonIndex === 0"
+                  @click="moveLessonUp(lessonIndex)"
+                >
+                  ↑
                 </button>
-            </header>
 
-            <div class="course-modal-body">
-                <section class="form-section">
-                    <h3>Kursus info</h3>
+                <button
+                  type="button"
+                  :disabled="lessonIndex === lessons.length - 1"
+                  @click="moveLessonDown(lessonIndex)"
+                >
+                  ↓
+                </button>
 
-                    <input v-model="courseTitle"
-                           class="input"
-                           type="text"
-                           placeholder="Kursus titel" />
-
-                    <textarea v-model="courseDescription"
-                              class="input textarea"
-                              placeholder="Kursus beskrivelse"></textarea>
-                </section>
-
-                <section class="form-section">
-                    <h3>Lektioner ({{ lessons.length }})</h3>
-
-                    <div v-for="(lesson, lessonIndex) in lessons"
-                         :key="lesson.localId"
-                         class="lesson-edit-card">
-                        <div class="lesson-edit-top">
-                            <div>
-                                <strong>{{ lessonIndex + 1 }}. {{ lesson.title || "Ny lektion" }}</strong>
-                                <small>{{ lesson.materials.length }} materiale(r)</small>
-                            </div>
-
-                            <div class="lesson-order-actions">
-                                <button type="button"
-                                        :disabled="lessonIndex === 0"
-                                        @click="moveLessonUp(lessonIndex)">
-                                    ↑
-                                </button>
-
-                                <button type="button"
-                                        :disabled="lessonIndex === lessons.length - 1"
-                                        @click="moveLessonDown(lessonIndex)">
-                                    ↓
-                                </button>
-
-                                <button type="button"
-                                        class="remove-btn"
-                                        @click="removeLesson(lesson.localId)">
-                                    ×
-                                </button>
-                            </div>
-                        </div>
-
-                        <input v-model="lesson.title"
-                               class="input"
-                               type="text"
-                               placeholder="Titel på lektion" />
-
-                        <input v-model="lesson.duration"
-                               class="input"
-                               type="text"
-                               placeholder="Varighed / omfang" />
-
-                        <div class="material-header">
-                            <div>
-                                <strong>Materialer til denne lektion</strong>
-                                <p>Tilføj PDF’er og videoer i den rækkefølge de skal ses.</p>
-                            </div>
-
-                            <div class="material-add-actions">
-                                <button class="small-btn"
-                                        type="button"
-                                        @click="addMaterial(lesson, 'video')">
-                                    + Video
-                                </button>
-
-                                <button class="small-btn"
-                                        type="button"
-                                        @click="addMaterial(lesson, 'pdf')">
-                                    + PDF
-                                </button>
-                            </div>
-                        </div>
-
-                        <div v-for="(material, materialIndex) in lesson.materials"
-                             :key="material.localId"
-                             class="material-card">
-                            <div class="material-card-top">
-                                <strong>
-                                    {{ materialIndex + 1 }}. {{ material.type === "video" ? "Video" : "PDF" }}
-                                </strong>
-
-                                <div class="material-order-actions">
-                                    <button type="button"
-                                            :disabled="materialIndex === 0"
-                                            @click="moveMaterialUp(lesson, materialIndex)">
-                                        ↑
-                                    </button>
-
-                                    <button type="button"
-                                            :disabled="materialIndex === lesson.materials.length - 1"
-                                            @click="moveMaterialDown(lesson, materialIndex)">
-                                        ↓
-                                    </button>
-
-                                    <button class="remove-btn"
-                                            type="button"
-                                            @click="removeMaterial(lesson, material.localId)">
-                                        Fjern
-                                    </button>
-                                </div>
-                            </div>
-
-                            <input v-model="material.title"
-                                   class="input"
-                                   type="text"
-                                   placeholder="Titel på materiale" />
-
-                            <input v-if="material.type === 'video'"
-                                   v-model="material.url"
-                                   class="input"
-                                   type="url"
-                                   placeholder="YouTube-link" />
-
-                            <label v-if="material.type === 'pdf'"
-                                   class="upload-box">
-                                <strong>
-                                    {{ material.fileName || "Klik for at uploade PDF" }}
-                                </strong>
-
-                                <small>{{ material.size || "PDF-fil" }}</small>
-
-                                <input type="file"
-                                       accept="application/pdf"
-                                       hidden
-                                       @change="handlePdfUpload($event, material)" />
-                            </label>
-                        </div>
-                    </div>
-
-                    <button class="add-lesson-btn"
-                            type="button"
-                            @click="addLesson">
-                        + Tilføj lektion
-                    </button>
-                </section>
+                <button
+                  type="button"
+                  class="remove-btn"
+                  @click="removeLesson(lesson.localId)"
+                >
+                  ×
+                </button>
+              </div>
             </div>
 
-            <footer class="course-modal-footer">
-                <button class="footer-btn footer-btn-light"
-                        type="button"
-                        @click="closeModal">
-                    Annuller
+            <input
+              v-model="lesson.title"
+              class="input"
+              type="text"
+              placeholder="Titel på lektion"
+            />
+
+            <input
+              v-model="lesson.duration"
+              class="input"
+              type="text"
+              placeholder="Varighed / omfang"
+            />
+
+            <div class="material-header">
+              <div>
+                <strong>Materialer til denne lektion</strong>
+                <p>Tilføj PDF’er og videoer i den rækkefølge de skal ses.</p>
+              </div>
+
+              <div class="material-add-actions">
+                <button
+                  class="small-btn"
+                  type="button"
+                  @click="addMaterial(lesson, 'video')"
+                >
+                  + Video
                 </button>
 
-                <button class="footer-btn footer-btn-dark"
-                        type="button"
-                        :disabled="!isFormValid"
-                        @click="saveCourse">
-                    {{ mode === "duplicate" ? "Opret kursus nu" : "Gem ændringer" }}
+                <button
+                  class="small-btn"
+                  type="button"
+                  @click="addMaterial(lesson, 'pdf')"
+                >
+                  + PDF
                 </button>
-            </footer>
-        </div>
+              </div>
+            </div>
+
+            <div
+              v-for="(material, materialIndex) in lesson.materials"
+              :key="material.localId"
+              class="material-card"
+            >
+              <div class="material-card-top">
+                <strong>
+                  {{ materialIndex + 1 }}.
+                  {{ material.type === "video" ? "Video" : "PDF" }}
+                </strong>
+
+                <div class="material-order-actions">
+                  <button
+                    type="button"
+                    :disabled="materialIndex === 0"
+                    @click="moveMaterialUp(lesson, materialIndex)"
+                  >
+                    ↑
+                  </button>
+
+                  <button
+                    type="button"
+                    :disabled="materialIndex === lesson.materials.length - 1"
+                    @click="moveMaterialDown(lesson, materialIndex)"
+                  >
+                    ↓
+                  </button>
+
+                  <button
+                    class="remove-btn"
+                    type="button"
+                    @click="removeMaterial(lesson, material.localId)"
+                  >
+                    Fjern
+                  </button>
+                </div>
+              </div>
+
+              <input
+                v-model="material.title"
+                class="input"
+                type="text"
+                placeholder="Titel på materiale"
+              />
+
+              <input
+                v-if="material.type === 'video'"
+                v-model="material.url"
+                class="input"
+                type="url"
+                placeholder="YouTube-link"
+              />
+
+              <label v-if="material.type === 'pdf'" class="upload-box">
+                <strong>
+                  {{ material.fileName || "Klik for at uploade PDF" }}
+                </strong>
+
+                <small>{{ material.size || "PDF-fil" }}</small>
+
+                <input
+                  type="file"
+                  accept="application/pdf"
+                  hidden
+                  @change="handlePdfUpload($event, material)"
+                />
+              </label>
+            </div>
+          </div>
+
+          <button class="add-lesson-btn" type="button" @click="addLesson">
+            + Tilføj lektion
+          </button>
+        </section>
+      </div>
+
+      <footer class="course-modal-footer">
+        <button
+          class="footer-btn footer-btn-light"
+          type="button"
+          @click="closeModal"
+        >
+          Annuller
+        </button>
+
+        <button
+          class="footer-btn footer-btn-dark"
+          type="button"
+          :disabled="!isFormValid"
+          @click="saveCourse"
+        >
+          {{ mode === "duplicate" ? "Opret kursus nu" : "Gem ændringer" }}
+        </button>
+      </footer>
     </div>
+  </div>
 </template>
 
 <script setup>
@@ -207,7 +244,7 @@ const emit = defineEmits(["close", "saved"]);
 const courseTitle = ref(
   props.mode === "duplicate"
     ? `${props.courseData.course.title} (Kopi)`
-    : props.courseData.course.title
+    : props.courseData.course.title,
 );
 
 const courseDescription = ref(props.courseData.course.description);
@@ -232,7 +269,7 @@ const lessons = ref(
         };
       }),
     };
-  })
+  }),
 );
 
 function makeLocalId() {
@@ -290,7 +327,7 @@ function addMaterial(lesson, type) {
 
 function removeMaterial(lesson, materialId) {
   lesson.materials = lesson.materials.filter(
-    (material) => material.localId !== materialId
+    (material) => material.localId !== materialId,
   );
 }
 
@@ -389,7 +426,7 @@ function saveCourse() {
               type: "video",
               title: material.title.trim(),
               url: getYoutubeEmbedUrl(material.url),
-              duration: lesson.duration || "",
+              //duration: lesson.duration || "",
             };
           }
 
@@ -415,192 +452,192 @@ function saveCourse() {
 </script>
 
 <style scoped>
-    .course-modal-overlay {
-        position: fixed;
-        inset: 0;
-        z-index: 1200;
-        background: rgba(0, 0, 0, 0.42);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        padding: 32px;
-    }
+.course-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  background: rgba(0, 0, 0, 0.42);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 32px;
+}
 
-    .course-modal {
-        width: 100%;
-        max-width: 760px;
-        max-height: 90vh;
-        background: white;
-        border-radius: 24px;
-        overflow: hidden;
-        display: flex;
-        flex-direction: column;
-    }
+.course-modal {
+  width: 100%;
+  max-width: 760px;
+  max-height: 90vh;
+  background: white;
+  border-radius: 24px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
 
-    .course-modal-header {
-        padding: 32px 36px 22px;
-        display: flex;
-        justify-content: space-between;
-    }
+.course-modal-header {
+  padding: 32px 36px 22px;
+  display: flex;
+  justify-content: space-between;
+}
 
-        .course-modal-header h2 {
-            font-size: 24px;
-            margin-bottom: 6px;
-        }
+.course-modal-header h2 {
+  font-size: 24px;
+  margin-bottom: 6px;
+}
 
-        .course-modal-header p {
-            color: #666;
-        }
+.course-modal-header p {
+  color: #666;
+}
 
-    .course-modal-close {
-        border: none;
-        background: transparent;
-        font-size: 32px;
-        color: #999;
-        cursor: pointer;
-    }
+.course-modal-close {
+  border: none;
+  background: transparent;
+  font-size: 32px;
+  color: #999;
+  cursor: pointer;
+}
 
-    .course-modal-body {
-        padding: 28px 36px;
-        overflow-y: auto;
-        display: grid;
-        gap: 30px;
-    }
+.course-modal-body {
+  padding: 28px 36px;
+  overflow-y: auto;
+  display: grid;
+  gap: 30px;
+}
 
-    .form-section h3 {
-        color: #ff4d26;
-        font-size: 13px;
-        text-transform: uppercase;
-        margin-bottom: 16px;
-    }
+.form-section h3 {
+  color: #ff4d26;
+  font-size: 13px;
+  text-transform: uppercase;
+  margin-bottom: 16px;
+}
 
-    .input {
-        width: 100%;
-        border: none;
-        background: #fafafa;
-        border-radius: 14px;
-        padding: 16px 18px;
-        margin-bottom: 14px;
-    }
+.input {
+  width: 100%;
+  border: none;
+  background: #fafafa;
+  border-radius: 14px;
+  padding: 16px 18px;
+  margin-bottom: 14px;
+}
 
-    .textarea {
-        min-height: 110px;
-        resize: vertical;
-    }
+.textarea {
+  min-height: 110px;
+  resize: vertical;
+}
 
-    .lesson-edit-card {
-        background: #fafafa;
-        border: 1px solid #eee;
-        border-radius: 18px;
-        padding: 18px;
-        margin-bottom: 16px;
-    }
+.lesson-edit-card {
+  background: #fafafa;
+  border: 1px solid #eee;
+  border-radius: 18px;
+  padding: 18px;
+  margin-bottom: 16px;
+}
 
-    .lesson-edit-top,
-    .material-card-top,
-    .material-header {
-        display: flex;
-        justify-content: space-between;
-        gap: 18px;
-        align-items: center;
-        margin-bottom: 14px;
-    }
+.lesson-edit-top,
+.material-card-top,
+.material-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: center;
+  margin-bottom: 14px;
+}
 
-        .lesson-edit-top small,
-        .material-header p {
-            display: block;
-            color: #777;
-            margin-top: 4px;
-        }
+.lesson-edit-top small,
+.material-header p {
+  display: block;
+  color: #777;
+  margin-top: 4px;
+}
 
-    .lesson-order-actions,
-    .material-order-actions,
-    .material-add-actions {
-        display: flex;
-        gap: 8px;
-    }
+.lesson-order-actions,
+.material-order-actions,
+.material-add-actions {
+  display: flex;
+  gap: 8px;
+}
 
-        .lesson-order-actions button,
-        .material-order-actions button,
-        .small-btn {
-            border: none;
-            background: white;
-            border-radius: 9px;
-            padding: 8px 10px;
-            font-weight: 800;
-            cursor: pointer;
-        }
+.lesson-order-actions button,
+.material-order-actions button,
+.small-btn {
+  border: none;
+  background: white;
+  border-radius: 9px;
+  padding: 8px 10px;
+  font-weight: 800;
+  cursor: pointer;
+}
 
-            .lesson-order-actions button:disabled,
-            .material-order-actions button:disabled {
-                opacity: 0.35;
-                cursor: not-allowed;
-            }
+.lesson-order-actions button:disabled,
+.material-order-actions button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
 
-    .remove-btn {
-        color: #ff4d26;
-    }
+.remove-btn {
+  color: #ff4d26;
+}
 
-    .material-card {
-        background: white;
-        border: 1px solid #eee;
-        border-radius: 14px;
-        padding: 16px;
-        margin-bottom: 12px;
-    }
+.material-card {
+  background: white;
+  border: 1px solid #eee;
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
 
-    .upload-box {
-        border: 1px dashed #ddd;
-        background: #fafafa;
-        border-radius: 14px;
-        padding: 18px;
-        display: grid;
-        gap: 6px;
-        cursor: pointer;
-    }
+.upload-box {
+  border: 1px dashed #ddd;
+  background: #fafafa;
+  border-radius: 14px;
+  padding: 18px;
+  display: grid;
+  gap: 6px;
+  cursor: pointer;
+}
 
-        .upload-box small {
-            color: #777;
-        }
+.upload-box small {
+  color: #777;
+}
 
-    .add-lesson-btn {
-        width: 100%;
-        border: 1px dashed #ddd;
-        background: white;
-        border-radius: 14px;
-        padding: 16px;
-        font-weight: 800;
-        cursor: pointer;
-    }
+.add-lesson-btn {
+  width: 100%;
+  border: 1px dashed #ddd;
+  background: white;
+  border-radius: 14px;
+  padding: 16px;
+  font-weight: 800;
+  cursor: pointer;
+}
 
-    .course-modal-footer {
-        padding: 24px 36px 32px;
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 16px;
-        background: #fafafa;
-    }
+.course-modal-footer {
+  padding: 24px 36px 32px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  background: #fafafa;
+}
 
-    .footer-btn {
-        border: none;
-        padding: 16px 20px;
-        border-radius: 14px;
-        font-weight: 800;
-        cursor: pointer;
-    }
+.footer-btn {
+  border: none;
+  padding: 16px 20px;
+  border-radius: 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
 
-    .footer-btn-light {
-        background: white;
-        border: 1px solid #eee;
-    }
+.footer-btn-light {
+  background: white;
+  border: 1px solid #eee;
+}
 
-    .footer-btn-dark {
-        background: #171717;
-        color: white;
-    }
+.footer-btn-dark {
+  background: #171717;
+  color: white;
+}
 
-    .footer-btn:disabled {
-        opacity: 0.45;
-        cursor: not-allowed;
-    }
+.footer-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
 </style>

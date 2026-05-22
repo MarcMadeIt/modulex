@@ -142,7 +142,6 @@
                                 type: "video",
                                 title: material.title.trim(),
                                 url: getYoutubeEmbedUrl(material.youtubeUrl),
-                                duration: lesson.duration.trim(),
                             };
                         }),
                     };

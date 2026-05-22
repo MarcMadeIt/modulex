@@ -91,11 +91,11 @@ export const createModule = async (req: AuthRequest, res: Response) => {
     if (!course) {
       return res.status(404).json({ message: "Course not found" });
     }
-    const { title, description, order, materials } = req.body;
+    const { title, description, duration, order, materials } = req.body;
     if (!title || order === undefined) {
       return res.status(400).json({ message: "Title and order are required" });
     }
-    const mod = await Module.create({ courseId: id, title, description, order, materials });
+    const mod = await Module.create({ courseId: id, title, description, duration, order, materials });
     return res.status(201).json({ module: mod });
   } catch {
     return res.status(500).json({ message: "Failed to create module" });

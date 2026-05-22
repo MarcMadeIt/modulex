@@ -27,6 +27,7 @@ async function apiFetch(path, options = {}) {
         response = await fetch(url, {
             ...options,
             headers,
+            credentials: "include",
         });
     } catch (error) {
         console.error("API kunne ikke kontaktes:", {
@@ -35,7 +36,7 @@ async function apiFetch(path, options = {}) {
         });
 
         throw new Error(
-            `Kunne ikke få kontakt til backend på ${API_URL}. Tjek at serveren kører.`
+            `Kunne ikke fï¿½ kontakt til backend pï¿½ ${API_URL}. Tjek at serveren kï¿½rer.`
         );
     }
 
@@ -70,6 +71,7 @@ export async function createAdminCourse(courseData) {
             body: JSON.stringify({
                 title: lesson.title,
                 description: lesson.description || "",
+                duration: lesson.duration || "",
                 order: index + 1,
                 materials: lesson.materials || [],
             }),
