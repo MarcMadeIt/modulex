@@ -4,8 +4,7 @@ import { User } from "../models/User";
 import jwt from "jsonwebtoken";
 import { AuthRequest } from "../middleware/auth.middleware";
 
-const passwordRegex =
-  /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/;
+const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/;
 
 export const signup = async (req: Request, res: Response) => {
   try {
@@ -79,17 +78,13 @@ export const login = async (req: Request, res: Response) => {
     const user = await User.findOne({ email });
 
     if (!user || !user.password) {
-    if (!user?.password) {
       return res.status(401).json({
         message: "Invalid email or password",
       });
     }
 
     // verify password
-    const isPasswordValid = await argon2.verify(
-      user.password,
-      password,
-    );
+    const isPasswordValid = await argon2.verify(user.password, password);
 
     if (!isPasswordValid) {
       return res.status(401).json({
