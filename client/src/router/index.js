@@ -41,11 +41,18 @@ const routes = [
           component: () => import("../layouts/admin/AdminDashboardHome.vue"),
       },
 
+
       {
         path: "/dashboardtest",
         name: "Dashboardtest",
         component: () => import("../pages/Dashboard.vue"),
-      },
+        },
+
+        {
+            path: "/admincourse",
+            name: "Admincourse",
+            component: () => import("../layouts/admin/AdminCoursesDashboard.vue"),
+        },
 
       {
         path: "course/:id",
@@ -54,7 +61,9 @@ const routes = [
         props: true,
       },
     ],
-  },
+    },
+
+
   {
     path: "/survey",
     name: "Survey",
