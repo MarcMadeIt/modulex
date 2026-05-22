@@ -314,6 +314,8 @@ const options: swaggerJsdoc.Options = {
           properties: {
             _id: { type: "string", example: "664f1c2e8b1a2c3d4e5f6a7b" },
             email: { type: "string", example: "user@example.com" },
+            companyName: { type: "string", example: "Acme Corp" },
+            contactPerson: { type: "string", example: "Jane Doe" },
             phone: { type: "string", example: "+45 12 34 56 78" },
             role: { type: "string", example: "client" },
             status: { type: "string", example: "active" },
@@ -376,13 +378,15 @@ const options: swaggerJsdoc.Options = {
         },
         SurveySubmitRequest: {
           type: "object",
-          required: ["email", "phone", "answers"],
+          required: ["email", "answers"],
           properties: {
             email: {
               type: "string",
               format: "email",
               example: "company@example.com",
             },
+            companyName: { type: "string", example: "Acme Corp" },
+            contactPerson: { type: "string", example: "Jane Doe" },
             phone: { type: "string", example: "+45 12 34 56 78" },
             answers: {
               type: "array",
