@@ -1,19 +1,21 @@
 ﻿<template>
-    <aside class="sidebar">
-        <div class="sidebar-logo">
-            module<span style="color: var(--color-primary-orange)">x</span>
-        </div>
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      module<span style="color: var(--color-primary-orange)">x</span>
+    </div>
 
-        <nav class="sidebar-nav">
-            <RouterLink v-for="item in navItems"
-                        :key="item.path"
-                        :to="item.path"
-                        class="sidebar-link"
-                        active-class="sidebar-link-active">
-                <span>{{ item.label }}</span>
-                <span>›</span>
-            </RouterLink>
-        </nav>
+    <nav class="sidebar-nav">
+      <RouterLink
+        v-for="item in navItems"
+        :key="item.path"
+        :to="item.path"
+        class="sidebar-link"
+        active-class="sidebar-link-active"
+      >
+        <span>{{ item.label }}</span>
+        <span>›</span>
+      </RouterLink>
+    </nav>
 
         <div class="sidebar-footer">
             <button type="button" class="sidebar-link" @click="handleLogout">
