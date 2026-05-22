@@ -91,7 +91,7 @@
                 </div>
 
                 <button type="submit" class="btn btn-primary btn-full">
-                  Afslut
+                  Indsend
                 </button>
               </form>
 
