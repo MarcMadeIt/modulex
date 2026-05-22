@@ -66,7 +66,7 @@
                     <button type="button"
                             :class="{ 'admin-tab-active': activeTab === 'leads' }"
                             @click="activeTab = 'leads'">
-                        Leads & onboarding ({{ filteredLeads.length }})
+                        Igangværende ({{ filteredLeads.length }})
                     </button>
                 </div>
             </div>
