@@ -1,14 +1,12 @@
 ﻿<script setup>
     import { computed, ref } from "vue";
 
-    import { createAdminCourse } from "../../data/adminCourseApiService.js";
+    import { createCourse } from "../../data/dummyCourseService.js";
 
     const emit = defineEmits(["close"]);
 
     const courseTitle = ref("");
     const courseDescription = ref("");
-    const apiError = ref("");
-    const isSaving = ref(false);
 
     const lessons = ref([
         {
@@ -36,12 +34,13 @@
         lessons.value = lessons.value.filter((lesson) => lesson.id !== lessonId);
     }
 
-    function addVideoMaterial(lesson) {
+    function addMaterial(lesson, type) {
         lesson.materials.push({
             id: makeLocalId(),
-            type: "video",
+            type,
             title: "",
             youtubeUrl: "",
+            file: null,
         });
     }
 
@@ -75,6 +74,20 @@
         emit("close");
     }
 
+    function handleFileUpload(event, material) {
+        const file = event.target.files[0];
+
+        if (!file) return;
+
+        material.file = file;
+
+        if (!material.title.trim()) {
+            material.title = file.name;
+        }
+
+        event.target.value = "";
+    }
+
     function getYoutubeEmbedUrl(url) {
         if (!url) return "";
 
@@ -95,16 +108,34 @@
         return videoId ? `https://www.youtube.com/embed/${videoId}` : "";
     }
 
+    function formatFileSize(file) {
+        if (!file) return "";
+
+        const sizeInKb = Math.round(file.size / 1024);
+
+        if (sizeInKb < 1024) {
+            return `${sizeInKb} KB`;
+        }
+
+        return `${(sizeInKb / 1024).toFixed(1)} MB`;
+    }
+
     function isMaterialValid(material) {
         const hasTitle = material.title.trim() !== "";
-        const hasValidYoutubeLink = getYoutubeEmbedUrl(material.youtubeUrl) !== "";
 
-        return hasTitle && hasValidYoutubeLink;
+        if (material.type === "video") {
+            return hasTitle && getYoutubeEmbedUrl(material.youtubeUrl) !== "";
+        }
+
+        if (material.type === "pdf") {
+            return hasTitle && material.file;
+        }
+
+        return false;
     }
 
     const isFormValid = computed(() => {
         const hasCourseTitle = courseTitle.value.trim() !== "";
-        const hasCourseDescription = courseDescription.value.trim() !== "";
 
         const hasValidLessons = lessons.value.every((lesson) => {
             const hasLessonTitle = lesson.title.trim() !== "";
@@ -117,46 +148,46 @@
             return hasLessonTitle && hasDuration && hasMaterials && allMaterialsValid;
         });
 
-        return hasCourseTitle && hasCourseDescription && hasValidLessons;
+        return hasCourseTitle && hasValidLessons;
     });
 
-    async function createNewCourse() {
-        if (!isFormValid.value || isSaving.value) return;
+    function createNewCourse() {
+        if (!isFormValid.value) return;
 
-        apiError.value = "";
-        isSaving.value = true;
+        const newCourse = {
+            title: courseTitle.value.trim(),
+            description: courseDescription.value.trim(),
 
-        try {
-            const newCourse = {
-                title: courseTitle.value.trim(),
-                description: courseDescription.value.trim(),
+            modules: lessons.value.map((lesson) => {
+                return {
+                    title: lesson.title.trim(),
+                    description: "",
+                    duration: lesson.duration.trim(),
 
-                modules: lessons.value.map((lesson) => {
-                    return {
-                        title: lesson.title.trim(),
-                        description: "",
-                        duration: lesson.duration.trim(),
-
-                        materials: lesson.materials.map((material) => {
+                    materials: lesson.materials.map((material) => {
+                        if (material.type === "video") {
                             return {
                                 type: "video",
                                 title: material.title.trim(),
                                 url: getYoutubeEmbedUrl(material.youtubeUrl),
                                 duration: lesson.duration.trim(),
                             };
-                        }),
-                    };
-                }),
-            };
+                        }
 
-            await createAdminCourse(newCourse);
+                        return {
+                            type: "pdf",
+                            title: material.title.trim(),
+                            fileUrl: `/files/${material.file.name}`,
+                            size: formatFileSize(material.file),
+                        };
+                    }),
+                };
+            }),
+        };
 
-            emit("close");
-        } catch (error) {
-            apiError.value = error.message || "Kurset kunne ikke oprettes.";
-        } finally {
-            isSaving.value = false;
-        }
+        createCourse(newCourse);
+
+        emit("close");
     }
 </script>
 
@@ -206,7 +237,7 @@
                             <input v-model="lesson.title"
                                    class="input"
                                    type="text"
-                                   placeholder="F.eks. Se introduktionsvideo" />
+                                   placeholder="F.eks. Se video og læs guide" />
                         </div>
 
                         <div class="form-group">
@@ -221,22 +252,28 @@
                         <div class="lesson-materials-header">
                             <div>
                                 <h3>Materialer til dette trin</h3>
-                                <p>Tilføj én eller flere YouTube-videoer til samme trin.</p>
+                                <p>Tilføj én eller flere videoer/PDF’er til samme trin.</p>
                             </div>
 
                             <div class="material-add-actions">
                                 <button class="btn btn-light"
                                         type="button"
-                                        @click="addVideoMaterial(lesson)">
+                                        @click="addMaterial(lesson, 'video')">
                                     + Video
+                                </button>
+
+                                <button class="btn btn-light"
+                                        type="button"
+                                        @click="addMaterial(lesson, 'pdf')">
+                                    + PDF
                                 </button>
                             </div>
                         </div>
 
                         <div v-if="lesson.materials.length === 0"
                              class="material-empty-state">
-                            <strong>Ingen videoer endnu</strong>
-                            <p>Klik på + Video for at tilføje en YouTube-video til trinnet.</p>
+                            <strong>Ingen materialer endnu</strong>
+                            <p>Klik på + Video eller + PDF for at tilføje materiale til trinnet.</p>
                         </div>
 
                         <div v-for="(material, materialIndex) in lesson.materials"
@@ -245,10 +282,16 @@
                             <div class="material-card-top">
                                 <div>
                                     <strong>
-                                        {{ materialIndex + 1 }}. Video
+                                        {{ materialIndex + 1 }}. {{ material.type === "video" ? "Video" : "PDF" }}
                                     </strong>
 
-                                    <p>YouTube-link</p>
+                                    <p>
+                                        {{
+                      material.type === "video"
+                        ? "YouTube-link"
+                        : "PDF-fil"
+                                        }}
+                                    </p>
                                 </div>
 
                                 <div class="material-order-actions">
@@ -273,15 +316,16 @@
                             </div>
 
                             <div class="form-group">
-                                <label class="input-label">Titel på video</label>
+                                <label class="input-label">Titel på materiale</label>
 
                                 <input v-model="material.title"
                                        class="input"
                                        type="text"
-                                       placeholder="F.eks. Introduktionsvideo" />
+                                       placeholder="F.eks. Introduktionsvideo eller produktguide" />
                             </div>
 
-                            <div class="form-group">
+                            <div v-if="material.type === 'video'"
+                                 class="form-group">
                                 <label class="input-label">YouTube-link</label>
 
                                 <input v-model="material.youtubeUrl"
@@ -304,6 +348,36 @@
                                     <small>Videoen vises automatisk her</small>
                                 </div>
                             </div>
+
+                            <div v-if="material.type === 'pdf'"
+                                 class="form-group">
+                                <label class="input-label">PDF-fil</label>
+
+                                <label class="upload-placeholder">
+                                    <span class="upload-icon">↑</span>
+
+                                    <strong>
+                                        {{
+                      material.file
+                        ? material.file.name
+                        : "Klik for at uploade PDF"
+                                        }}
+                                    </strong>
+
+                                    <small>
+                                        {{
+                      material.file
+                        ? formatFileSize(material.file)
+                        : "Max 500MB"
+                                        }}
+                                    </small>
+
+                                    <input type="file"
+                                           accept="application/pdf"
+                                           hidden
+                                           @change="handleFileUpload($event, material)" />
+                                </label>
+                            </div>
                         </div>
 
                         <button v-if="lessons.length > 1"
@@ -322,11 +396,6 @@
                 </section>
             </div>
 
-            <p v-if="apiError"
-               class="api-error">
-                {{ apiError }}
-            </p>
-
             <footer class="modal-footer">
                 <button class="btn btn-light"
                         type="button"
@@ -336,9 +405,9 @@
 
                 <button class="btn btn-primary"
                         type="button"
-                        :disabled="!isFormValid || isSaving"
+                        :disabled="!isFormValid"
                         @click="createNewCourse">
-                    {{ isSaving ? "Opretter..." : "Opret kursus nu" }}
+                    Opret kursus nu
                 </button>
             </footer>
         </div>
@@ -441,14 +510,5 @@
 
     .remove-material-btn {
         color: #ff4d26 !important;
-    }
-
-    .api-error {
-        color: #b91c1c;
-        background: #fee2e2;
-        padding: 12px 16px;
-        border-radius: 10px;
-        font-weight: 700;
-        margin: 0 32px 16px;
     }
 </style>
