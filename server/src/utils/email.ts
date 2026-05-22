@@ -12,9 +12,20 @@ const transporter = nodemailer.createTransport({
 });
 
 // Linket til spørgeskemaet bygges fra CLIENT_URL (samme mønster som CORS i server.ts).
-export function getSurveyUrl(): string {
+// Modtagerens email sendes med som query-param, så survey-formen kan forudfylde
+// (og låse) email-feltet — brugeren skal ikke skrive den selv.
+export function getSurveyUrl(email?: string): string {
   const base = process.env.CLIENT_URL || "http://localhost:5173";
-  return `${base}/survey`;
+  const url = `${base}/survey`;
+  return email ? `${url}?email=${encodeURIComponent(email)}` : url;
+}
+
+// Linket til oprettelse af adgangskode (/signup). Email sendes med som query-param,
+// så signup-formen forudfylder og låser email-feltet — kunden skal kun vælge password.
+export function getSignupUrl(email?: string): string {
+  const base = process.env.CLIENT_URL || "http://localhost:5173";
+  const url = `${base}/signup`;
+  return email ? `${url}?email=${encodeURIComponent(email)}` : url;
 }
 
 /**
@@ -22,7 +33,7 @@ export function getSurveyUrl(): string {
  * Kaster hvis afsendelsen fejler, så kalderen kan rapportere det pr. mail.
  */
 export async function sendSurveyEmail(to: string): Promise<void> {
-  const surveyUrl = getSurveyUrl();
+  const surveyUrl = getSurveyUrl(to);
   const fromName = process.env.MAIL_FROM_NAME || "Modulex Billund Academy";
   const fromEmail = process.env.MAIL_FROM_EMAIL || process.env.SMTP_USER;
 
@@ -73,6 +84,69 @@ export async function sendSurveyEmail(to: string): Promise<void> {
     from: `"${fromName}" <${fromEmail}>`,
     to,
     subject: "Udfyld dit spørgeskema",
+    text,
+    html,
+  });
+}
+
+/**
+ * Sender registrerings-mailen ("Dit kursus er klar – opret din adgangskode") til kunden,
+ * når en admin har aktiveret dem. Linket peger på /signup?email=... så email-feltet
+ * forudfyldes/låses og kunden kun skal vælge et password.
+ * Kaster hvis afsendelsen fejler, så kalderen kan rapportere det.
+ */
+export async function sendRegistrationEmail(to: string): Promise<void> {
+  const signupUrl = getSignupUrl(to);
+  const fromName = process.env.MAIL_FROM_NAME || "Modulex Billund Academy";
+  const fromEmail = process.env.MAIL_FROM_EMAIL || process.env.SMTP_USER;
+
+  const text = [
+    "Kære kunde,",
+    "",
+    "Dit kursus er klar. Opret din adgangskode for at få adgang:",
+    signupUrl,
+    "",
+    "Venlig hilsen",
+    fromName,
+  ].join("\n");
+
+  const html = `
+  <div style="margin:0;padding:0;background-color:#f4f4f5;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5;padding:32px 0;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background-color:#ffffff;border-radius:16px;overflow:hidden;font-family:Arial,Helvetica,sans-serif;">
+            <tr>
+              <td style="background-color:#171717;padding:24px 32px;color:#ffffff;font-size:18px;font-weight:bold;">
+                ${fromName}
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:32px;color:#1f2937;font-size:15px;line-height:1.6;">
+                <p style="margin:0 0 16px;">Kære kunde,</p>
+                <p style="margin:0 0 24px;">Dit kursus er klar. Opret din adgangskode for at få adgang til Academy.</p>
+                <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
+                  <tr>
+                    <td style="border-radius:10px;background-color:#ff4d26;">
+                      <a href="${signupUrl}" target="_blank" style="display:inline-block;padding:14px 28px;color:#ffffff;font-weight:bold;text-decoration:none;font-size:15px;">Opret adgangskode →</a>
+                    </td>
+                  </tr>
+                </table>
+                <p style="margin:0 0 8px;color:#6b7280;font-size:13px;">Virker knappen ikke? Kopiér linket:</p>
+                <p style="margin:0 0 24px;font-size:13px;"><a href="${signupUrl}" style="color:#ff4d26;">${signupUrl}</a></p>
+                <p style="margin:0;color:#1f2937;">Venlig hilsen<br/>${fromName}</p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </div>`;
+
+  await transporter.sendMail({
+    from: `"${fromName}" <${fromEmail}>`,
+    to,
+    subject: "Dit kursus er klar – opret din adgangskode",
     text,
     html,
   });

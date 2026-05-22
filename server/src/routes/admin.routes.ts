@@ -3,6 +3,7 @@ import { authRequired, adminOnly } from "../middleware/auth.middleware";
 import {
   getCustomers,
   getCustomerById,
+  activateCustomer,
   getAdminCourses,
   createCourse,
   updateCourse,
@@ -99,6 +100,45 @@ router.get("/customers", getCustomers);
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.get("/customers/:id", getCustomerById);
+
+/**
+ * @swagger
+ * /admin/customers/{id}/activate:
+ *   patch:
+ *     summary: Activate a customer and send the registration (set-password) email
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The MongoDB ObjectId of the customer
+ *         example: 664f1c2e8b1a2c3d4e5f6a7b
+ *     responses:
+ *       200:
+ *         description: Customer moved to pending_activation and email sent
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 user:
+ *                   $ref: '#/components/schemas/CustomerResponse'
+ *       401:
+ *         description: Not authenticated
+ *       403:
+ *         description: Forbidden - admin role required
+ *       404:
+ *         description: Customer not found
+ *       409:
+ *         description: Customer cannot be activated in its current status
+ *       502:
+ *         description: Registration email could not be sent
+ */
+router.patch("/customers/:id/activate", activateCustomer);
 
 /**
  * @swagger

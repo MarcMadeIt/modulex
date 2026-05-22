@@ -107,8 +107,13 @@
             <p>Mail: {{ partner.email }}</p>
             <p>Virksomhed: {{ partner.company }}</p>
 
-            <small v-if="getAssignedCourseCount(partner.id) > 0">
-              {{ getAssignedCourseCount(partner.id) }} kursus/kurser tildelt
+            <small
+              v-if="getAssignedCourseCount(partner.id) > 0"
+              class="assigned-count"
+              @click="openAssignModal(partner)"
+            >
+              {{ getAssignedCourseCount(partner.id) }} kursus/kurser tildelt ·
+              rediger
             </small>
           </div>
 
@@ -125,21 +130,34 @@
           </button>
 
           <div class="lead-action-buttons">
+            <!-- Mail er allerede sendt (afventer kunden laver password): tilbyd gensend. -->
             <button
+              v-if="partner.rawStatus === 'pending_activation'"
+              class="approve-btn approve-btn-resend"
+              type="button"
+              @click="activateLeadAndSendCourses(partner)"
+            >
+              Gensend link
+            </button>
+
+            <!-- Ingen kurser tildelt endnu: åbn tildel-modal. -->
+            <button
+              v-else-if="getAssignedCourseCount(partner.id) === 0"
               class="survey-btn"
               type="button"
               @click="openAssignModal(partner)"
             >
-              Tildel kurser
+              Tildel kursus
             </button>
 
+            <!-- Kurser tildelt: send kursus + aktiver kunde. -->
             <button
+              v-else
               class="approve-btn"
               type="button"
-              :disabled="getAssignedCourseCount(partner.id) === 0"
               @click="activateLeadAndSendCourses(partner)"
             >
-              Aktiver kunde / send kurser
+              Send kursus
             </button>
           </div>
         </div>
@@ -491,17 +509,38 @@ function handleLeadCreated() {
   activeTab.value = "leads";
 }
 
-function activateLeadAndSendCourses(partner) {
-  const assignedCourseCount = getAssignedCourseCount(partner.id);
-
-  if (assignedCourseCount === 0) {
+async function activateLeadAndSendCourses(partner) {
+  if (getAssignedCourseCount(partner.id) === 0) {
     alert("Du skal først tildele mindst ét kursus til kunden.");
     return;
   }
 
-  // Optimistisk: fjern fra "Klar til kursus" i visningen.
-  // DB-baseret aktivering (status -> active) er en senere opgave.
-  partners.value = partners.value.filter((item) => item.id !== partner.id);
+  try {
+    const res = await fetch(
+      `${API_URL}/admin/customers/${partner.id}/activate`,
+      {
+        method: "PATCH",
+        credentials: "include",
+      },
+    );
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.message || `HTTP ${res.status}`);
+    }
+
+    const data = await res.json();
+
+    // Rækken bliver stående — opdatér bare status til "Afventer aktivering".
+    // (Kunden bliver "Aktiv" når de selv har oprettet en adgangskode.)
+    const idx = partners.value.findIndex((item) => item.id === partner.id);
+    if (idx !== -1) {
+      partners.value[idx] = mapUser(data.user);
+    }
+  } catch (err) {
+    alert("Kunne ikke sende kursus: " + err.message);
+    console.error("Aktivering fejlede", err);
+  }
 }
 
 function openSurveyAnswers(person) {
@@ -756,6 +795,11 @@ function saveAssignedCourses() {
   font-weight: 700;
 }
 
+.assigned-count {
+  cursor: pointer;
+  text-decoration: underline;
+}
+
 .status {
   font-size: 12px;
   font-weight: 700;
@@ -810,6 +854,10 @@ function saveAssignedCourses() {
 .approve-btn:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+}
+
+.approve-btn-resend {
+  background: #6b7280;
 }
 
 .lead-action-buttons {
