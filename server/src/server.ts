@@ -5,6 +5,7 @@ import "dotenv/config";
 import swaggerUi from "swagger-ui-express";
 import { swaggerSpec } from "./config/swagger";
 import router from "./routes";
+import cookieParser from "cookie-parser";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -16,8 +17,8 @@ app.use(
     credentials: true,
   }),
 );
-
 app.use(express.json());
+app.use(cookieParser());
 
 // Swagger docs
 app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));

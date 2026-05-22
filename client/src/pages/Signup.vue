@@ -201,8 +201,11 @@
 
 <script setup>
 import { ref, computed } from "vue";
-
+import { useRouter } from "vue-router";
+import { auth } from "../stores/auth";
+ 
 const API_URL = import.meta.env.VITE_API_URL;
+const router = useRouter();
 
 const email = ref("");
 const password = ref("");
@@ -238,27 +241,27 @@ const handleSignup = async () => {
     errorMessage.value = "Adgangskoderne stemmer ikke overens!";
     return;
   }
-
-  try {
-    const response = await fetch(`${API_URL}/auth/signup`, {
+    try {
+        const response = await fetch(`${API_URL}/auth/signup`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      credentials: "include",   // ← NY: cookien sættes ved signup
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         email: email.value,
         password: password.value,
       }),
     });
-
+ 
     const data = await response.json();
-
+ 
     if (!response.ok) {
       errorMessage.value = data.message || "Signup mislykkedes.";
       return;
     }
-
-    console.log("Signup successful:", data);
+ 
+    // Auto-login: brugeren er allerede logget ind via cookien
+    auth.setUser(data.user);
+    router.push(data.user.role === "admin" ? "/dashboard/admin" : "/dashboard");
   } catch (err) {
     errorMessage.value = "Kunne ikke oprette bruger. Prøv igen senere.";
     console.error("Signup error:", err);

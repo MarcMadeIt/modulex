@@ -356,6 +356,7 @@
     const selectedCourseIds = ref([]);
     const courseSearch = ref("");
     const refreshKey = ref(0);
+    const showCreateCourseModal = ref(false);
 
     const showCreateLeadModal = ref(false);
     const showCreateCourseForm = ref(false);
