@@ -56,14 +56,12 @@ export const signup = async (req: Request, res: Response) => {
       user: {
         id: user._id,
         email: user.email,
-        companyName: user.companyName,
-        contactPerson: user.contactPerson,
-        phone: user.phone,
         role: user.role,
         status: user.status,
       },
     });
   } catch (error) {
+    console.error("Signup error:", error);
     return res.status(500).json({
       message: "Signup failed",
     });
@@ -77,7 +75,7 @@ export const login = async (req: Request, res: Response) => {
     // check if user exists
     const user = await User.findOne({ email });
 
-    if (!user || !user.password) {
+    if (!user?.password) {
       return res.status(401).json({
         message: "Invalid email or password",
       });
@@ -118,6 +116,8 @@ export const login = async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
+    // Log the error for debugging/monitoring and return a generic message
+    console.error("Login error:", error);
     return res.status(500).json({
       message: "Login failed",
     });

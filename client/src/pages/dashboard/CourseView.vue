@@ -122,7 +122,13 @@ import {
   completeCourse,
 } from "../../data/dummyCourseService.js";
 
-import { PlayCircle, FileText, ArrowLeft, ArrowRight } from "lucide-vue-next";
+import {
+  PlayCircle,
+  FileText,
+  ArrowLeft,
+  ArrowRight,
+  ChevronRight,
+} from "lucide-vue-next";
 
 const route = useRoute();
 const router = useRouter();

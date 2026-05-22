@@ -8,8 +8,6 @@ export type UserStatus =
 
 export interface IUser extends Document {
   email: string;
-  companyName: string;
-  contactPerson: string;
   phone: string;
   password?: string;
   role: "admin" | "client";
@@ -27,8 +25,6 @@ const userSchema = new Schema<IUser>(
       lowercase: true,
       trim: true,
     },
-    companyName: { type: String, required: true, trim: true },
-    contactPerson: { type: String, required: true, trim: true },
     phone: { type: String, required: true, trim: true },
     password: { type: String },
     role: { type: String, enum: ["admin", "client"], default: "client" },

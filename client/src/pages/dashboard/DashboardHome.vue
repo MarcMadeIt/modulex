@@ -20,6 +20,9 @@
       </div>
     </section>
 
+    <div v-if="usingDummyData" class="dummy-data-note">
+      Dette er dummydata — backend-data kunne ikke hentes endnu.
+    </div>
     <!-- COURSES -->
     <section class="course-section">
       <div class="course-section-header">
@@ -119,7 +122,7 @@
   </div>
 </template>
 
-<script setup>
+<!-- <script setup>
 import { computed, ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 
@@ -238,7 +241,277 @@ function goToFirstCourse() {
     openCourse(firstActiveCourse.id);
   }
 }
+</script> -->
+
+<script setup>
+import { computed, onMounted, ref } from "vue";
+import { useRouter } from "vue-router";
+
+import AppCard from "../../components/ui/AppCard.vue";
+import AppButton from "../../components/ui/AppButton.vue";
+
+import {
+  dummyCourses,
+  dummyModules,
+  dummyUserProgresses,
+} from "../../data/dummyData.js";
+
+import { BookOpen, Clock3, CircleCheck, GraduationCap } from "lucide-vue-next";
+
+const router = useRouter();
+
+const STORAGE_KEY = "modulex_dummy_data";
+
+const activeFilter = ref("all");
+const courses = ref([]);
+const currentUser = ref(null);
+const loading = ref(true);
+const usingDummyData = ref(false);
+
+const companyName = computed(() => {
+  /*
+    BACKEND-USIKKERHED:
+    Vi ved endnu ikke præcis hvordan /auth/me returnerer virksomhedsnavn.
+    Derfor prøver vi flere mulige felter.
+  */
+  return (
+    currentUser.value?.companyName ||
+    currentUser.value?.company?.name ||
+    currentUser.value?.businessName ||
+    currentUser.value?.email ||
+    "din virksomhed"
+  );
+});
+
+onMounted(() => {
+  loadDashboard();
+});
+
+async function loadDashboard() {
+  loading.value = true;
+
+  try {
+    const token = localStorage.getItem("modulex_token");
+
+    if (!token) {
+      throw new Error("Ingen token fundet — bruger dummydata");
+    }
+
+    const user = await fetchCurrentUser(token);
+    const apiCourses = await fetchCourses(token);
+
+    currentUser.value = user;
+    courses.value = mapApiCoursesForFrontend(apiCourses);
+
+    usingDummyData.value = false;
+  } catch (error) {
+    console.warn("Kunne ikke hente backend-data:", error);
+
+    loadDummyDashboard();
+    usingDummyData.value = true;
+  } finally {
+    loading.value = false;
+  }
+}
+
+async function fetchCurrentUser(token) {
+  /*
+    BACKEND:
+    Swagger viser GET /auth/me.
+    Den bør returnere den aktive bruger baseret på JWT-token.
+  */
+  const response = await fetch("/auth/me", {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error("Kunne ikke hente aktiv bruger");
+  }
+
+  return await response.json();
+}
+
+async function fetchCourses(token) {
+  /*
+    BACKEND:
+    Swagger siger GET /courses = "Get all courses accessible to the authenticated user".
+    Vi antager derfor, at endpointet kun returnerer de kurser,
+    som Modulex har tildelt denne virksomhed.
+  */
+  const response = await fetch("/courses", {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error("Kunne ikke hente kurser");
+  }
+
+  return await response.json();
+}
+
+function mapApiCoursesForFrontend(apiCourses) {
+  /*
+    BACKEND-USIKKERHED:
+    Vi kender ikke endeligt API-format endnu.
+    Derfor mapper vi defensivt og accepterer både:
+    - id / _id
+    - modules / items
+    - progress / progressPercentage
+  */
+
+  return apiCourses.map((course, index) => {
+    const modules = course.modules || course.items || [];
+    const progress = course.progress ?? course.progressPercentage ?? 0;
+
+    return {
+      id: course._id,
+      icon: index % 2 === 0 ? "▣" : "▤",
+      title: course.title,
+      description: course.description,
+      progress,
+      completed: course.completed ?? progress >= 100,
+      moduleCount: modules.length,
+      totalDuration: getTotalDuration(modules),
+      modules,
+    };
+  });
+}
+
+function loadDummyDashboard() {
+  const data = getDummyData();
+
+  /*
+    Midlertidig dummy-user.
+    Når Signup/Login er koblet på backend, kommer denne fra /auth/me.
+  */
+  currentUser.value = {
+    id: "6a0f11ec0f551b25ef759773",
+    email: "test@test.dk",
+    companyName: "Billund Design ApS",
+    role: "client",
+    status: "active",
+  };
+
+  courses.value = mapDummyCoursesForFrontend(data);
+}
+
+function getDummyData() {
+  const savedData = localStorage.getItem(STORAGE_KEY);
+
+  if (savedData) {
+    return JSON.parse(savedData);
+  }
+
+  const initialData = {
+    courses: dummyCourses,
+    modules: dummyModules,
+    userProgresses: dummyUserProgresses,
+  };
+
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(initialData));
+
+  return initialData;
+}
+
+function mapDummyCoursesForFrontend(data) {
+  const userId = currentUser.value?.id;
+
+  /*
+    DUMMY-ANTAGELSE:
+    Vi bruger userProgresses som "course assignment".
+    Dvs. hvis en bruger har progress på et courseId,
+    betragter vi kurset som tildelt brugeren.
+    
+    Når backend er klar, skal dette erstattes af GET /courses.
+  */
+  const assignedCourseIds = data.userProgresses
+    .filter((progress) => progress.userId === userId)
+    .map((progress) => progress.courseId);
+
+  return data.courses
+    .filter((course) => {
+      /*
+        Hvis der ikke findes assignments til testbrugeren,
+        viser vi alle dummy-kurser, så UI stadig kan testes.
+      */
+      if (assignedCourseIds.length === 0) return true;
+
+      return assignedCourseIds.includes(course._id);
+    })
+    .map((course, index) => {
+      const progressData = data.userProgresses.find(
+        (progress) =>
+          progress.courseId === course._id && progress.userId === userId,
+      );
+
+      const courseModules = data.modules.filter(
+        (module) => module.courseId === course._id,
+      );
+
+      const progress = progressData ? progressData.progress : 0;
+
+      return {
+        id: course._id,
+        icon: index % 2 === 0 ? "▣" : "▤",
+        title: course.title,
+        description: course.description,
+        progress,
+        completed: progress >= 100,
+        moduleCount: courseModules.length,
+        totalDuration: getTotalDuration(courseModules),
+        modules: courseModules,
+      };
+    });
+}
+
+function getTotalDuration(modules) {
+  return modules.reduce((total, module) => {
+    /*
+      DUMMYDATA:
+      duration ligger som string, fx "8 min".
+      parseInt("8 min") bliver 8.
+    */
+    const minutes = parseInt(module.duration) || 0;
+    return total + minutes;
+  }, 0);
+}
+
+const filteredCourses = computed(() => {
+  if (activeFilter.value === "completed") {
+    return courses.value.filter((course) => course.completed);
+  }
+
+  if (activeFilter.value === "active") {
+    return courses.value.filter((course) => !course.completed);
+  }
+
+  return courses.value;
+});
+
+function openCourse(id) {
+  router.push(`/dashboard/course/${id}`);
+}
+
+function goToFirstCourse() {
+  const firstActiveCourse =
+    courses.value.find((course) => !course.completed) || courses.value[0];
+
+  if (firstActiveCourse) {
+    openCourse(firstActiveCourse.id);
+  }
+}
+
+function getCourseButtonText(course) {
+  if (course.completed) return "Gense";
+  if (course.progress > 0) return "Fortsæt";
+  return "Start";
+}
 </script>
+
 <style scoped>
 .course-card {
   cursor: pointer;
@@ -365,7 +638,7 @@ function goToFirstCourse() {
 .dashboard-hero-pattern {
   position: absolute;
   right: -72px;
-  bottom: -100px;
+  bottom: -140px;
   z-index: 1;
 
   width: 48%;
