@@ -123,6 +123,7 @@
 import { computed, ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 
+import { auth } from "../../stores/auth";
 import AppCard from "../../components/ui/AppCard.vue";
 import AppButton from "../../components/ui/AppButton.vue";
 
@@ -142,14 +143,31 @@ import {
 
 const router = useRouter();
 
-const companyName = "Billund Design ApS";
+// const companyName = "Billund Design ApS";
+const companyName = computed(() => {
+  return (
+    auth.state.user?.id ||
+    auth.state.user?._id ||
+    auth.state.user?.userId ||
+    "ingen user id fundet"
+  );
+});
 const activeFilter = ref("all");
 
 const courses = ref([]);
 
-onMounted(() => {
+onMounted(async () => {
+  console.log("AUTH USER før fetchMe:", auth.state.user);
+
+  if (!auth.state.ready) {
+    await auth.fetchMe();
+  }
+
+  console.log("AUTH USER efter fetchMe:", auth.state.user);
+
   loadCourses();
 });
+
 const STORAGE_KEY = "modulex_dummy_data";
 const CURRENT_USER_ID = "665000000000000000000002";
 
