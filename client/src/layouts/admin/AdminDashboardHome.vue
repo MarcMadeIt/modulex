@@ -6,11 +6,19 @@
                 <p>Administrér brugere, kurser og se statistik.</p>
             </div>
 
-            <button class="create-course-btn"
-                    type="button"
-                    @click="showCreateCourseModal= true">
-                Opret kursus
-            </button>
+            <div class="admin-header-actions">
+                <button class="create-lead-btn"
+                        type="button"
+                        @click="openCreateLeadModal">
+                    + Send spørgeskema
+                </button>
+
+                <button class="create-course-btn"
+                        type="button"
+                        @click="openCreateCourseForm">
+                    + Opret kursus
+                </button>
+            </div>
         </div>
 
         <div class="stats-grid">
@@ -38,59 +46,169 @@
                 </div>
 
                 <p>NYE LEADS</p>
-                <h2>8</h2>
+                <h2>{{ leads.length }}</h2>
             </AppCard>
         </div>
 
         <div class="partner-section">
-            <h3 class="table-title">
-                PARTNERE OG LEADS
-            </h3>
+            <div class="partner-section-top">
+                <h3 class="table-title">
+                    PARTNERE OG LEADS
+                </h3>
 
-            <div class="table-header">
-                <span>Partner</span>
-                <span>Status</span>
-                <span>Survey</span>
-                <span>Handlinger</span>
+                <div class="admin-tabs">
+                    <button type="button"
+                            :class="{ 'admin-tab-active': activeTab === 'partners' }"
+                            @click="activeTab = 'partners'">
+                        Aktive partnere ({{ filteredPartners.length }})
+                    </button>
+
+                    <button type="button"
+                            :class="{ 'admin-tab-active': activeTab === 'leads' }"
+                            @click="activeTab = 'leads'">
+                        Leads & onboarding ({{ filteredLeads.length }})
+                    </button>
+                </div>
             </div>
 
-            <div class="partner-row"
-                 v-for="partner in partners"
-                 :key="partner.id">
-                <div class="partner-info">
-                    <strong>{{ partner.name }}</strong>
-                    <p>{{ partner.company }}</p>
+            <div class="admin-search">
+                <input v-model="searchQuery"
+                       type="text"
+                       placeholder="Søg efter navn, virksomhed eller mail..." />
+            </div>
 
-                    <small v-if="getPartnerAssignedCount(partner.id) > 0">
-                        {{ getPartnerAssignedCount(partner.id) }} kursus/kurser tildelt
-                    </small>
+            <template v-if="activeTab === 'partners'">
+                <div class="table-header">
+                    <span>Partner</span>
+                    <span>Status</span>
+                    <span>Survey</span>
+                    <span>Handlinger</span>
                 </div>
 
-                <span class="status"
-                      :class="partner.statusClass">
-                    {{ partner.status }}
-                </span>
+                <div class="partner-row"
+                     v-for="partner in filteredPartners"
+                     :key="partner.id">
+                    <div class="partner-info">
+                        <strong>{{ partner.name }}</strong>
+                        <p>Mail: {{ partner.email }}</p>
+                        <p>Virksomhed: {{ partner.company }}</p>
 
-                <button class="survey-btn"
-                        type="button">
-                    SE SVAR
-                </button>
+                        <small v-if="getAssignedCourseCount(partner.id) > 0">
+                            {{ getAssignedCourseCount(partner.id) }} kursus/kurser tildelt
+                        </small>
+                    </div>
 
-                <button class="approve-btn"
-                        type="button"
-                        @click="handlePartnerAction(partner)">
-                    {{ partner.action }}
-                </button>
-            </div>
+                    <span class="status"
+                          :class="partner.statusClass">
+                        {{ partner.status }}
+                    </span>
+
+                    <button class="survey-btn"
+                            type="button"
+                            @click="openSurveyAnswers(partner)">
+                        SE SVAR
+                    </button>
+
+                    <button class="approve-btn"
+                            type="button"
+                            @click="openAssignModal(partner)">
+                        Tildel kurser
+                    </button>
+                </div>
+
+                <div v-if="filteredPartners.length === 0"
+                     class="empty-state">
+                    Ingen partnere matcher din søgning.
+                </div>
+            </template>
+
+            <template v-if="activeTab === 'leads'">
+                <div class="table-header">
+                    <span>Lead</span>
+                    <span>Status</span>
+                    <span>Survey</span>
+                    <span>Handlinger</span>
+                </div>
+
+                <div class="partner-row"
+                     v-for="lead in filteredLeads"
+                     :key="lead.id">
+                    <div class="partner-info">
+                        <strong>{{ getLeadDisplayName(lead) }}</strong>
+
+                        <p>Mail: {{ lead.email }}</p>
+
+                        <p v-if="getLeadDisplayCompany(lead)">
+                            Virksomhed: {{ getLeadDisplayCompany(lead) }}
+                        </p>
+
+                        <small v-if="getAssignedCourseCount(lead.id) > 0">
+                            {{ getAssignedCourseCount(lead.id) }} kursus/kurser tildelt
+                        </small>
+                    </div>
+
+                    <span class="status"
+                          :class="lead.statusClass">
+                        {{ lead.status }}
+                    </span>
+
+                    <div class="lead-progress">
+                        <div class="lead-progress-bar">
+                            <div class="lead-progress-fill"
+                                 :style="{ width: lead.surveyProgress + '%' }"></div>
+                        </div>
+
+                        <small>{{ lead.surveyProgress }}% udfyldt</small>
+
+                        <button v-if="hasSurveyAnswers(lead)"
+                                class="survey-btn"
+                                type="button"
+                                @click="openSurveyAnswers(lead)">
+                            SE SVAR
+                        </button>
+                    </div>
+
+                    <div class="lead-actions">
+                        <button v-if="!hasSurveyAnswers(lead)"
+                                class="approve-btn"
+                                type="button"
+                                @click="handleLeadAction(lead)">
+                            {{ lead.action }}
+                        </button>
+
+                        <div v-else
+                             class="lead-action-buttons">
+                            <button class="survey-btn"
+                                    type="button"
+                                    @click="openAssignModal(lead)">
+                                Tildel kurser
+                            </button>
+
+                            <button class="approve-btn"
+                                    type="button"
+                                    :disabled="getAssignedCourseCount(lead.id) === 0"
+                                    @click="activateLeadAndSendCourses(lead)">
+                                Aktiver kunde / send kurser
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div v-if="filteredLeads.length === 0"
+                     class="empty-state">
+                    Ingen leads matcher din søgning.
+                </div>
+            </template>
         </div>
 
+        <!-- TILDEL KURSER MODAL -->
         <div v-if="showAssignModal && selectedPartner"
              class="assign-modal-overlay">
             <div class="assign-modal">
                 <header class="assign-modal-header">
                     <div>
-                        <h2>Tildel kurser til {{ selectedPartner.name }}</h2>
-                        <p>Vælg de kurser som denne partner skal gennemgå.</p>
+                        <h2>Tildel kurser til {{ selectedPartner.name || selectedPartner.email }}</h2>
+                        <p>Vælg de kurser som denne kunde skal gennemgå.</p>
                     </div>
 
                     <button class="assign-modal-close"
@@ -141,10 +259,62 @@
                 </footer>
             </div>
         </div>
-        <AdminCreateCourseForm
-    v-if="showCreateCourseModal"
-    @close="showCreateCourseModal = false"
-/>
+
+        <!-- SURVEY SVAR MODAL -->
+        <div v-if="showSurveyModal && selectedSurveyPerson"
+             class="assign-modal-overlay">
+            <div class="survey-modal">
+                <header class="assign-modal-header">
+                    <div>
+                        <h2>Survey svar</h2>
+                        <p>
+                            {{ selectedSurveyPerson.email }}
+                            <span v-if="selectedSurveyPerson.company">
+                                · {{ selectedSurveyPerson.company }}
+                            </span>
+                        </p>
+                    </div>
+
+                    <button class="assign-modal-close"
+                            type="button"
+                            @click="closeSurveyAnswers">
+                        ×
+                    </button>
+                </header>
+
+                <div class="survey-answer-list">
+                    <div class="survey-answer-card">
+                        <strong>Hvilken type virksomhed har I?</strong>
+                        <p>{{ selectedSurveyPerson.company || "Ikke angivet endnu" }}</p>
+                    </div>
+
+                    <div class="survey-answer-card">
+                        <strong>Hvor meget erfaring har I med Modulex produkter?</strong>
+                        <p>Vi har lidt erfaring og ønsker oplæring i bestillingsflowet.</p>
+                    </div>
+
+                    <div class="survey-answer-card">
+                        <strong>Hvad vil I helst lære først?</strong>
+                        <p>Vi vil gerne starte med konfiguration, bestilling og brand guidelines.</p>
+                    </div>
+                </div>
+
+                <footer class="assign-modal-footer">
+                    <button class="assign-btn assign-btn-dark"
+                            type="button"
+                            @click="closeSurveyAnswers">
+                        Luk
+                    </button>
+                </footer>
+            </div>
+        </div>
+
+        <CreateLeadModal v-if="showCreateLeadModal"
+                         @close="closeCreateLeadModal"
+                         @created="handleLeadCreated" />
+
+        <AdminCreateCourseForm v-if="showCreateCourseForm"
+                               @close="closeCreateCourseForm" />
     </div>
 </template>
 
@@ -152,6 +322,7 @@
     import { computed, ref } from "vue";
 
     import AppCard from "../../components/ui/AppCard.vue";
+    import CreateLeadModal from "./CreateLeadModal.vue";
     import AdminCreateCourseForm from "./AdminCreateCourseForm.vue";
 
     import {
@@ -162,24 +333,23 @@
 
     import {
         dummyPartners,
-        dummyCourses,
+        dummyLeads,
         dummyCourseAssignments,
     } from "../../data/dummyData.js";
 
+    import { getCourses } from "../../data/dummyCourseService.js";
+
     const ASSIGNMENTS_KEY = "modulex_course_assignments";
+    const LEADS_KEY = "modulex_dummy_leads";
+    const PARTNERS_KEY = "modulex_dummy_partners";
 
-    const courses = ref(
-        dummyCourses.map((course, index) => {
-            return {
-                id: course._id,
-                icon: index % 2 === 0 ? "▣" : "▤",
-                title: course.title,
-                description: course.description,
-            };
-        })
-    );
+    const activeTab = ref("partners");
+    const searchQuery = ref("");
 
-    const partners = ref([...dummyPartners]);
+    const courses = ref(getCourses());
+
+    const partners = ref(getSavedPartners());
+    const leads = ref(getSavedLeads());
 
     const showAssignModal = ref(false);
     const selectedPartner = ref(null);
@@ -188,12 +358,48 @@
     const refreshKey = ref(0);
     const showCreateCourseModal = ref(false);
 
+    const showCreateLeadModal = ref(false);
+    const showCreateCourseForm = ref(false);
+
+    const showSurveyModal = ref(false);
+    const selectedSurveyPerson = ref(null);
+
+    const filteredPartners = computed(() => {
+        const search = searchQuery.value.toLowerCase().trim();
+
+        if (!search) return partners.value;
+
+        return partners.value.filter((partner) => {
+            return (
+                partner.name.toLowerCase().includes(search) ||
+                partner.company.toLowerCase().includes(search) ||
+                partner.email.toLowerCase().includes(search)
+            );
+        });
+    });
+
+    const filteredLeads = computed(() => {
+        const search = searchQuery.value.toLowerCase().trim();
+
+        if (!search) return leads.value;
+
+        return leads.value.filter((lead) => {
+            const name = lead.name || "";
+            const company = lead.company || "";
+            const email = lead.email || "";
+
+            return (
+                name.toLowerCase().includes(search) ||
+                company.toLowerCase().includes(search) ||
+                email.toLowerCase().includes(search)
+            );
+        });
+    });
+
     const filteredCourses = computed(() => {
         const search = courseSearch.value.toLowerCase().trim();
 
-        if (!search) {
-            return courses.value;
-        }
+        if (!search) return courses.value;
 
         return courses.value.filter((course) => {
             return (
@@ -203,12 +409,183 @@
         });
     });
 
+    function hasSurveyAnswers(lead) {
+        return lead.hasSurveyAnswers || lead.surveyProgress === 100;
+    }
+
+    function getLeadDisplayName(lead) {
+        if (hasSurveyAnswers(lead) && lead.name) {
+            return lead.name;
+        }
+
+        return lead.email;
+    }
+
+    function getLeadDisplayCompany(lead) {
+        if (hasSurveyAnswers(lead) && lead.company) {
+            return lead.company;
+        }
+
+        return "";
+    }
+
+    function normalizeLead(lead) {
+        return {
+            id: lead.id || crypto.randomUUID(),
+            email: lead.email || "",
+            name: lead.name || "",
+            company: lead.company || "",
+            status: lead.status || "Survey sendt",
+            statusClass: lead.statusClass || "waiting",
+            surveyProgress: lead.surveyProgress ?? 35,
+            action: lead.action || "Simuler svar",
+            surveySent: lead.surveySent ?? true,
+            hasSurveyAnswers:
+                lead.hasSurveyAnswers ?? lead.surveyProgress === 100,
+        };
+    }
+
+    function refreshCourses() {
+        courses.value = getCourses();
+    }
+
+    function openCreateCourseForm() {
+        showCreateCourseForm.value = true;
+    }
+
+    function closeCreateCourseForm() {
+        showCreateCourseForm.value = false;
+        refreshCourses();
+    }
+
+    function getSavedPartners() {
+        const savedPartners = localStorage.getItem(PARTNERS_KEY);
+
+        if (savedPartners) return JSON.parse(savedPartners);
+
+        localStorage.setItem(PARTNERS_KEY, JSON.stringify(dummyPartners));
+
+        return [...dummyPartners];
+    }
+
+    function savePartners() {
+        localStorage.setItem(PARTNERS_KEY, JSON.stringify(partners.value));
+    }
+
+    function getSavedLeads() {
+        const savedLeads = localStorage.getItem(LEADS_KEY);
+
+        if (savedLeads) {
+            return JSON.parse(savedLeads).map((lead) => normalizeLead(lead));
+        }
+
+        const initialLeads = dummyLeads.map((lead) => {
+            return normalizeLead({
+                ...lead,
+                name: "",
+                company: "",
+                status: "Survey sendt",
+                statusClass: "waiting",
+                surveyProgress: 35,
+                action: "Simuler svar",
+                surveySent: true,
+                hasSurveyAnswers: false,
+            });
+        });
+
+        localStorage.setItem(LEADS_KEY, JSON.stringify(initialLeads));
+
+        return initialLeads;
+    }
+
+    function saveLeads() {
+        localStorage.setItem(LEADS_KEY, JSON.stringify(leads.value));
+    }
+
+    function openCreateLeadModal() {
+        showCreateLeadModal.value = true;
+    }
+
+    function closeCreateLeadModal() {
+        showCreateLeadModal.value = false;
+    }
+
+    function handleLeadCreated(newLeads) {
+        const leadsToAdd = Array.isArray(newLeads) ? newLeads : [newLeads];
+
+        const normalizedLeads = leadsToAdd
+            .map((lead) => normalizeLead(lead))
+            .filter((lead) => {
+                return !leads.value.some(
+                    (existingLead) =>
+                        existingLead.email.toLowerCase() === lead.email.toLowerCase()
+                );
+            });
+
+        leads.value.unshift(...normalizedLeads);
+
+        saveLeads();
+
+        activeTab.value = "leads";
+    }
+
+    function handleLeadAction(lead) {
+        if (lead.action === "Simuler svar") {
+            const emailName = lead.email.split("@")[0];
+            const emailDomain = lead.email.split("@")[1] || "ukendt.dk";
+
+            lead.name = emailName;
+            lead.company = emailDomain;
+            lead.status = "Survey besvaret";
+            lead.statusClass = "lead-ready";
+            lead.surveyProgress = 100;
+            lead.action = "Afventer kursustildeling";
+            lead.hasSurveyAnswers = true;
+
+            saveLeads();
+        }
+    }
+
+    function activateLeadAndSendCourses(lead) {
+        const assignedCourseCount = getAssignedCourseCount(lead.id);
+
+        if (assignedCourseCount === 0) {
+            alert("Du skal først tildele mindst ét kursus til kunden.");
+            return;
+        }
+
+        partners.value.unshift({
+            id: lead.id,
+            name: lead.name || lead.email,
+            email: lead.email,
+            company: lead.company || "Ikke angivet",
+            status: "I gang",
+            statusClass: "active",
+            action: "Tildel kurser",
+        });
+
+        leads.value = leads.value.filter((item) => item.id !== lead.id);
+
+        savePartners();
+        saveLeads();
+
+        activeTab.value = "partners";
+    }
+
+    function openSurveyAnswers(person) {
+        selectedSurveyPerson.value = person;
+        showSurveyModal.value = true;
+    }
+
+    function closeSurveyAnswers() {
+        selectedSurveyPerson.value = null;
+        showSurveyModal.value = false;
+    }
+
     function getAssignments() {
         const savedAssignments = localStorage.getItem(ASSIGNMENTS_KEY);
 
-        if (savedAssignments) {
-            return JSON.parse(savedAssignments);
-        }
+        if (savedAssignments) return JSON.parse(savedAssignments);
 
         localStorage.setItem(
             ASSIGNMENTS_KEY,
@@ -222,35 +599,19 @@
         localStorage.setItem(ASSIGNMENTS_KEY, JSON.stringify(assignments));
     }
 
-    function getPartnerAssignedCount(partnerId) {
+    function getAssignedCourseCount(personId) {
         refreshKey.value;
 
         const assignments = getAssignments();
 
-        return assignments[partnerId]?.length || 0;
+        return assignments[personId]?.length || 0;
     }
 
-    function handlePartnerAction(partner) {
-        if (partner.action === "Godkend Partner") {
-            partner.status = "I gang";
-            partner.statusClass = "active";
-            partner.action = "Tildel kurser";
-            return;
-        }
-
-        if (partner.action === "Tildel kurser") {
-            openAssignModal(partner);
-            return;
-        }
-
-        alert(`Viser partner: ${partner.name}`);
-    }
-
-    function openAssignModal(partner) {
+    function openAssignModal(person) {
         const assignments = getAssignments();
 
-        selectedPartner.value = partner;
-        selectedCourseIds.value = assignments[partner.id] || [];
+        selectedPartner.value = person;
+        selectedCourseIds.value = assignments[person.id] || [];
         courseSearch.value = "";
         showAssignModal.value = true;
     }
@@ -310,14 +671,29 @@
             color: #666;
         }
 
-    .create-course-btn {
-        background: #ff4d26;
-        color: white;
+    .admin-header-actions {
+        display: flex;
+        gap: 12px;
+    }
+
+    .create-course-btn,
+    .create-lead-btn {
         border: none;
         padding: 14px 24px;
         border-radius: 10px;
         cursor: pointer;
-        font-weight: 600;
+        font-weight: 700;
+    }
+
+    .create-course-btn {
+        background: #171717;
+        color: white;
+    }
+
+    .create-lead-btn {
+        background: white;
+        color: #171717;
+        border: 1px solid #ddd;
     }
 
     .stats-grid {
@@ -358,9 +734,52 @@
         box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
     }
 
-    .table-title {
+    .partner-section-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 24px;
         margin-bottom: 20px;
     }
+
+    .table-title {
+        margin: 0;
+    }
+
+    .admin-tabs {
+        background: #f5f5f5;
+        border-radius: 12px;
+        padding: 4px;
+        display: flex;
+        gap: 4px;
+    }
+
+        .admin-tabs button {
+            border: none;
+            background: transparent;
+            padding: 10px 16px;
+            border-radius: 9px;
+            font-weight: 800;
+            cursor: pointer;
+        }
+
+    .admin-tab-active {
+        background: white !important;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+    }
+
+    .admin-search {
+        margin-bottom: 20px;
+    }
+
+        .admin-search input {
+            width: 100%;
+            border: 1px solid #eee;
+            background: #fafafa;
+            border-radius: 12px;
+            padding: 14px 16px;
+            font-size: 14px;
+        }
 
     .table-header {
         display: grid;
@@ -398,6 +817,7 @@
     .partner-info p {
         font-size: 13px;
         color: #777;
+        margin-bottom: 3px;
     }
 
     .partner-info small {
@@ -416,16 +836,20 @@
         justify-self: start;
     }
 
-    .pending {
-        color: #a855f7;
-    }
-
     .active {
         color: #ff5b2e;
     }
 
     .approved {
         color: #22c55e;
+    }
+
+    .waiting {
+        color: #ca8a04;
+    }
+
+    .lead-ready {
+        color: #a855f7;
     }
 
     .survey-btn {
@@ -454,6 +878,16 @@
         cursor: pointer;
     }
 
+        .approve-btn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
+    .lead-action-buttons {
+        display: grid;
+        gap: 8px;
+    }
+
     .card-icon {
         width: 42px;
         height: 42px;
@@ -463,6 +897,42 @@
         background: #f5f5f5;
         border-radius: 12px;
         margin-bottom: 18px;
+    }
+
+    .lead-progress {
+        display: grid;
+        gap: 8px;
+        width: fit-content;
+    }
+
+    .lead-progress-bar {
+        width: 120px;
+        height: 7px;
+        background: #f1f1f1;
+        border-radius: 50px;
+        overflow: hidden;
+    }
+
+    .lead-progress-fill {
+        height: 100%;
+        background: #ff4d26;
+    }
+
+    .lead-progress small {
+        color: #777;
+        font-size: 11px;
+        font-weight: 700;
+    }
+
+    .lead-actions {
+        display: flex;
+        align-items: center;
+    }
+
+    .empty-state {
+        padding: 32px;
+        color: #777;
+        text-align: center;
     }
 
     .assign-modal-overlay {
@@ -476,7 +946,8 @@
         padding: 24px;
     }
 
-    .assign-modal {
+    .assign-modal,
+    .survey-modal {
         width: 100%;
         max-width: 620px;
         max-height: 86vh;
@@ -526,32 +997,39 @@
             font-size: 14px;
         }
 
-    .assign-course-list {
+    .assign-course-list,
+    .survey-answer-list {
         padding: 24px 32px;
         display: grid;
         gap: 16px;
         overflow-y: auto;
     }
 
-    .assign-course-card {
+    .assign-course-card,
+    .survey-answer-card {
         width: 100%;
         border: 1px solid #eee;
         background: white;
         border-radius: 14px;
         padding: 18px 20px;
+        text-align: left;
+    }
+
+    .assign-course-card {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        text-align: left;
         cursor: pointer;
     }
 
-        .assign-course-card strong {
+        .assign-course-card strong,
+        .survey-answer-card strong {
             font-size: 15px;
             color: #171717;
         }
 
-        .assign-course-card p {
+        .assign-course-card p,
+        .survey-answer-card p {
             margin-top: 6px;
             color: #666;
             font-size: 13px;

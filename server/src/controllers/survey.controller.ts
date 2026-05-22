@@ -21,13 +21,7 @@ export const submitSurvey = async (req: Request, res: Response) => {
       status: "pending_approval",
     });
 
-    await SurveyResponse.create({
-      userId: user._id,
-      userEmail: user.email,
-      answers,
-    });
-    // The client sends answers as a map { questionId: answer }, but the
-    // SurveyResponse schema stores an array of { questionId, answer }.
+    // Convert answers map to array format expected by the schema.
     const answerList: IAnswer[] = Object.entries(answers ?? {}).map(
       ([questionId, answer]) => ({
         questionId,
@@ -42,7 +36,6 @@ export const submitSurvey = async (req: Request, res: Response) => {
         answers: answerList,
       });
     } catch (err) {
-      // Don't leave an orphaned user that permanently blocks this email.
       await User.deleteOne({ _id: user._id });
       throw err;
     }

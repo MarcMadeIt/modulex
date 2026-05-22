@@ -6,12 +6,12 @@ import { User } from "./models/User";
 async function seed() {
   await mongoose.connect(process.env.MONGODB_URI!);
 
-  const password = await argon2.hash("Secret123!");
+  const password = await argon2.hash("test1234!");
 
   await User.findOneAndUpdate(
-    { email: "admin@example.com" },
+    { email: "admin@test.dk" },
     {
-      email: "admin@example.com",
+      email: "admin@test.dk",
       companyName: "Admin",
       contactPerson: "Admin",
       phone: "+00 00 00 00 00",
@@ -22,7 +22,7 @@ async function seed() {
     { upsert: true, new: true },
   );
 
-  console.log("Seeded: admin@example.com / Secret123!");
+  console.log("Seeded: admin@test.dk / test1234!");
 
   await mongoose.disconnect();
 }

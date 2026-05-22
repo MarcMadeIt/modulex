@@ -2,54 +2,31 @@ export const dummyPartners = [
     {
         id: "665000000000000000000002",
         name: "Søren Hansen",
-        email: "soren@hansensskilte.dk",
         company: "Hansens Skilte",
-        status: "I gang",
-        statusClass: "active",
+        status: "Ikke godkendt",
+        statusClass: "pending",
+        action: "Godkend Partner",
     },
     {
         id: "665000000000000000000003",
-        name: "Mette Jensen",
-        email: "mette@mjdesign.dk",
-        company: "MJ Design",
-        status: "Fuldført",
-        statusClass: "approved",
+        name: "Maria Jensen",
+        company: "Nordic Print",
+        status: "I gang",
+        statusClass: "active",
+        action: "Tildel kurser",
     },
     {
         id: "665000000000000000000004",
         name: "Lars Nielsen",
-        email: "lars@billundexpo.dk",
-        company: "Billund Expo",
-        status: "I gang",
-        statusClass: "active",
-    },
-];
-
-export const dummyLeads = [
-    {
-        id: "665000000000000000000901",
-        name: "Anders Andersen",
-        email: "anders@a-skilte.dk",
-        company: "A-Skilte",
-        status: "Afventer svar",
-        statusClass: "waiting",
-        surveyProgress: 35,
-        action: "Simuler svar",
-    },
-    {
-        id: "665000000000000000000902",
-        name: "Pia Poulsen",
-        email: "pia@nordicvisuals.dk",
-        company: "Nordic Visuals",
-        status: "Lead klar",
-        statusClass: "lead-ready",
-        surveyProgress: 0,
-        action: "Send survey",
+        company: "City Signs",
+        status: "Fuldført",
+        statusClass: "approved",
+        action: "Se partner",
     },
 ];
 
 export const dummyCourseAssignments = {
-    "665000000000000000000002": [
+    "665000000000000000000003": [
         "665000000000000000000101",
         "665000000000000000000102",
     ],
