@@ -30,10 +30,8 @@
       <div class="course-content">
         <div class="step-header">
           <div class="step-type">
-            <PlayCircle v-if="currentStep.type === 'video'" :size="18" />
-
-            <FileText v-else-if="currentStep.type === 'pdf'" :size="18" />
-            <span> {{ currentStep.type }}</span>
+            <BookOpen :size="18" />
+            <span>Modul {{ currentIndex + 1 }}</span>
           </div>
 
           <h2>{{ currentStep.title }}</h2>
@@ -42,42 +40,68 @@
           </div>
 
           <p>
-            Gennemgå materialet herunder. Når du er klar, skal du bekræfte
-            nederst på siden for at gå videre.
+            {{
+              currentStep.description ||
+              "Gennemgå alle materialer herunder. Når du er klar, skal du bekræfte nederst på siden for at gå videre."
+            }}
           </p>
         </div>
 
-        <div class="content-box">
-          <template v-if="currentStep.type === 'video' && currentStep.url">
-            <iframe
-              class="course-video"
-              :src="currentStep.url"
-              title="Kursus video"
-              frameborder="0"
-              allowfullscreen
-            ></iframe>
-          </template>
+        <div class="materials-list">
+          <div
+            v-for="(material, materialIndex) in currentStep.materials"
+            :key="material.id || material._id || materialIndex"
+            class="material-section"
+          >
+            <div class="material-header">
+              <div class="material-type">
+                <PlayCircle v-if="material.type === 'video'" :size="18" />
+                <FileText v-else-if="material.type === 'pdf'" :size="18" />
+                <span>{{ material.type === "video" ? "Video" : "PDF" }}</span>
+              </div>
 
-          
+              <h3>{{ material.title }}</h3>
 
-          <template v-else-if="currentStep.type === 'pdf'">
-  <div class="content-placeholder-icon">📄</div>
+              <small v-if="material.duration || material.size">
+                {{ material.duration || material.size }}
+              </small>
+            </div>
 
-  <p>{{ currentStep.title }}</p>
+            <div
+              class="content-box"
+              :class="{
+                'content-box-pdf': material.type === 'pdf' && material.fileUrl,
+              }"
+            >
+              <template v-if="material.type === 'video' && material.url">
+                <iframe
+                  class="course-video"
+                  :src="material.url"
+                  :title="material.title"
+                  frameborder="0"
+                  allowfullscreen
+                ></iframe>
+              </template>
 
-  <a
-    :href="currentStep.fileUrl"
-    target="_blank"
-    class="pdf-link"
-  >
-    Åbn PDF
-  </a>
-</template>
+              <template v-else-if="material.type === 'pdf' && material.fileUrl">
+                <iframe
+                  class="course-pdf"
+                  :src="material.fileUrl"
+                  :title="material.title"
+                ></iframe>
 
-          <template v-else>
-            <div class="content-placeholder-icon">▤</div>
-            <p>{{ currentStep.title }}</p>
-          </template>
+                <a :href="material.fileUrl" target="_blank" class="pdf-link">
+                  Åbn PDF i ny fane
+                </a>
+              </template>
+
+              <template v-else>
+                <div class="content-placeholder-icon">▤</div>
+                <p>{{ material.title }}</p>
+                <small>Materiale mangler eller link er ikke sat</small>
+              </template>
+            </div>
+          </div>
         </div>
 
         <label class="confirm-box" :class="{ 'confirm-box-active': confirmed }">
@@ -132,7 +156,13 @@ import {
   completeCourse,
 } from "../../data/dummyCourseService.js";
 
-import { PlayCircle, FileText, ArrowLeft, ArrowRight } from "lucide-vue-next";
+import {
+  PlayCircle,
+  FileText,
+  ArrowLeft,
+  ArrowRight,
+  BookOpen,
+} from "lucide-vue-next";
 
 const route = useRoute();
 const router = useRouter();
@@ -182,18 +212,18 @@ onMounted(() => {
   course.value = {
     id: foundCourse.id,
     title: foundCourse.title,
-    items: foundCourse.modules.flatMap((module) => {
-  return (module.materials || []).map((material) => {
-    return {
-      title: module.title,
-      description: module.description,
-      type: material.type,
-      url: material.url,
-      fileUrl: material.fileUrl,
-      duration: material.duration,
-    };
-  });
-}),
+    items: foundCourse.modules
+      .slice()
+      .sort((a, b) => (a.order || 0) - (b.order || 0))
+      .map((module) => {
+        return {
+          id: module._id || module.id,
+          title: module.title,
+          description: module.description,
+          duration: module.duration,
+          materials: module.materials || [],
+        };
+      }),
   };
 
   if (course.value.items.length === 0) {
@@ -201,6 +231,7 @@ onMounted(() => {
       {
         title: foundCourse.title,
         type: "intro",
+        materials: [],
       },
     ];
   }
@@ -317,7 +348,7 @@ function exitCourse() {
   color: var(--color-primary-medium);
 }
 
-.content-box {
+/* .content-box {
   aspect-ratio: 16 / 9;
   background: var(--color-primary-ultralight);
   border: 1px dashed var(--color-border);
@@ -331,6 +362,80 @@ function exitCourse() {
   color: var(--color-muted);
   font-weight: 800;
   overflow: hidden;
+} */
+
+.materials-list {
+  display: grid;
+  gap: var(--space-6);
+  margin-bottom: var(--space-6);
+}
+
+.material-section {
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-paper);
+  overflow: hidden;
+}
+
+.material-header {
+  padding: 1.2rem 1.4rem;
+  border-bottom: 1px solid var(--color-border-light);
+  display: grid;
+  gap: 0.4rem;
+}
+
+.material-type {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--color-primary-orange);
+  font-size: var(--text-xs);
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.material-header h3 {
+  margin: 0;
+  font-size: var(--text-md);
+  font-weight: 900;
+  color: var(--color-text-primary);
+}
+
+.material-header small {
+  color: var(--color-text-secondary);
+  font-weight: 800;
+}
+
+.content-box {
+  aspect-ratio: 16 / 9;
+  background: var(--color-primary-ultralight);
+  border: none;
+  border-radius: 0;
+  margin-bottom: 0;
+}
+
+.content-box-pdf {
+  display: block;
+  padding: 0;
+  aspect-ratio: auto;
+  min-height: 520px;
+  background: var(--color-bg-paper);
+}
+
+.course-pdf {
+  width: 100%;
+  height: 520px;
+  border: none;
+  display: block;
+}
+
+.pdf-link {
+  display: inline-flex;
+  margin: 0.8rem 1rem 1rem;
+  color: var(--color-primary-orange);
+  font-weight: 900;
+  text-decoration: none;
 }
 
 .course-video {
@@ -487,6 +592,4 @@ function exitCourse() {
 
   padding: 0.45rem 0.85rem;
 }
-
-
 </style>

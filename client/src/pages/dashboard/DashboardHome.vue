@@ -52,17 +52,18 @@
           >
             Afsluttede
           </button>
-
-          <button
-            class="filter-button filter-button-reset"
-            @click="resetDummyData"
-          >
-            Nulstil data
-          </button>
         </div>
       </div>
 
-      <div class="course-grid">
+      <div v-if="errorMessage" class="dashboard-error">
+        {{ errorMessage }}
+      </div>
+
+      <div v-if="loading" class="spinner-wrapper">
+        <div class="spinner"></div>
+      </div>
+
+      <div v-else-if="filteredCourses.length > 0" class="course-grid">
         <AppCard
           v-for="course in filteredCourses"
           :key="course.id"
@@ -115,6 +116,10 @@
           </div>
         </AppCard>
       </div>
+
+      <div v-else class="empty-state">
+        Der er endnu ikke tildelt kurser til denne bruger.
+      </div>
     </section>
   </div>
 </template>
@@ -128,12 +133,6 @@ import AppCard from "../../components/ui/AppCard.vue";
 import AppButton from "../../components/ui/AppButton.vue";
 
 import {
-  dummyCourses,
-  dummyModules,
-  dummyUserProgresses,
-} from "../../data/dummyData.js";
-
-import {
   BookOpen,
   Clock3,
   CircleCheck,
@@ -142,107 +141,134 @@ import {
 } from "lucide-vue-next";
 
 const router = useRouter();
+const API_URL = import.meta.env.VITE_API_URL;
 
-// const companyName = "Billund Design ApS";
+const activeFilter = ref("all");
+const courses = ref([]);
+const currentUser = ref(null);
+const loading = ref(true);
+const errorMessage = ref("");
+
 const companyName = computed(() => {
   return (
-    auth.state.user?.id ||
-    auth.state.user?._id ||
-    auth.state.user?.userId ||
-    "ingen user id fundet"
+    currentUser.value?.companyName ||
+    currentUser.value?.company ||
+    currentUser.value?.name ||
+    currentUser.value?.contactPerson ||
+    currentUser.value?.email ||
+    "din virksomhed"
   );
 });
-const activeFilter = ref("all");
 
-const courses = ref([]);
-
-onMounted(async () => {
-  console.log("AUTH USER før fetchMe:", auth.state.user);
-
-  if (!auth.state.ready) {
-    await auth.fetchMe();
-  }
-
-  console.log("AUTH USER efter fetchMe:", auth.state.user);
-
-  loadCourses();
-});
-
-const STORAGE_KEY = "modulex_dummy_data";
-const CURRENT_USER_ID = "665000000000000000000002";
-
-function getData() {
-  const savedData = localStorage.getItem(STORAGE_KEY);
-
-  if (savedData) {
-    return JSON.parse(savedData);
-  }
-
-  const initialData = {
-    courses: dummyCourses,
-    modules: dummyModules,
-    userProgresses: dummyUserProgresses,
-  };
-
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(initialData));
-
-  return initialData;
-}
-
-function mapCoursesForFrontend(data) {
-  return data.courses.map((course, index) => {
-    const progressData = data.userProgresses.find(
-      (progress) =>
-        progress.courseId === course._id && progress.userId === CURRENT_USER_ID,
-    );
-
-    const courseModules = data.modules.filter(
-      (module) => module.courseId === course._id,
-    );
-
-    const progress = progressData ? progressData.progress : 0;
-
-    return {
-      id: course._id,
-      icon: index % 2 === 0 ? "▣" : "▤",
-      title: course.title,
-      description: course.description,
-      progress,
-      completed: progress >= 100,
-      moduleCount: courseModules.length,
-      totalDuration: getTotalDuration(courseModules),
-      modules: courseModules,
-    };
-  });
-
-  function getTotalDuration(modules) {
-    return modules.reduce((total, module) => {
-      const minutes = parseInt(module.duration) || 0;
-      return total + minutes;
-    }, 0);
-  }
-}
-
-function loadCourses() {
-  const data = getData();
-  courses.value = mapCoursesForFrontend(data);
-}
-
-function resetDummyData() {
-  localStorage.removeItem(STORAGE_KEY);
-  loadCourses();
-}
 const filteredCourses = computed(() => {
   if (activeFilter.value === "completed") {
-    return courses.value.filter((c) => c.completed);
+    return courses.value.filter((course) => course.completed);
   }
 
   if (activeFilter.value === "active") {
-    return courses.value.filter((c) => !c.completed);
+    return courses.value.filter((course) => !course.completed);
   }
 
   return courses.value;
 });
+
+onMounted(() => {
+  loadDashboard();
+});
+
+async function loadDashboard() {
+  loading.value = true;
+  errorMessage.value = "";
+
+  try {
+    await loadAuthUser();
+
+    const response = await fetch(`${API_URL}/courses`, {
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      throw new Error(`Kunne ikke hente kurser: HTTP ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    console.log("COURSES FROM API:", data);
+
+    const apiCourses = data.courses || data;
+
+    if (!Array.isArray(apiCourses)) {
+      throw new Error("API returnerede ikke en gyldig kursusliste.");
+    }
+
+    courses.value = mapApiCoursesForFrontend(apiCourses);
+  } catch (error) {
+    console.error("Dashboard fejl:", error);
+
+    courses.value = [];
+    errorMessage.value =
+      error.message || "Noget gik galt, da dashboardet skulle indlæses.";
+  } finally {
+    loading.value = false;
+  }
+}
+
+async function loadAuthUser() {
+  if (!auth.state.ready) {
+    await auth.fetchMe();
+  }
+
+  if (!auth.state.user) {
+    throw new Error("Du er ikke logget ind, eller sessionen er udløbet.");
+  }
+
+  currentUser.value = auth.state.user;
+}
+
+function mapApiCoursesForFrontend(apiCourses) {
+  return apiCourses.map((course) => {
+    const modules = course.modules || course.items || [];
+
+    const rawProgress =
+      course.progressPercentage ??
+      course.progress?.percentage ??
+      course.progress ??
+      0;
+
+    const progress = Number(rawProgress) || 0;
+
+    return {
+      id: course._id || course.id,
+      title: course.title,
+      description: course.description || "",
+      progress,
+      completed: course.completed ?? progress >= 100,
+      moduleCount: modules.length,
+      totalDuration: getTotalDuration(modules),
+      modules: modules.map(mapModuleForFrontend),
+    };
+  });
+}
+
+function mapModuleForFrontend(module) {
+  return {
+    id: module._id || module.id,
+    courseId: module.courseId,
+    title: module.title,
+    description: module.description || "",
+    order: module.order || 0,
+    duration: module.duration || "",
+    materials: module.materials || module.contents || [],
+    completed: false,
+  };
+}
+
+function getTotalDuration(modules) {
+  return modules.reduce((total, module) => {
+    const minutes = parseInt(module.duration) || 0;
+    return total + minutes;
+  }, 0);
+}
 
 function openCourse(id) {
   router.push(`/dashboard/course/${id}`);
@@ -256,7 +282,14 @@ function goToFirstCourse() {
     openCourse(firstActiveCourse.id);
   }
 }
+
+function getCourseButtonText(course) {
+  if (course.completed) return "Gense";
+  if (course.progress > 0) return "Fortsæt";
+  return "Start";
+}
 </script>
+
 <style scoped>
 .course-card {
   cursor: pointer;
@@ -268,17 +301,6 @@ function goToFirstCourse() {
 .course-card:hover {
   transform: translateY(-4px);
   box-shadow: var(--shadow-card);
-}
-
-/* temporary reset button */
-.filter-button-reset {
-  background: var(--color-error-bg);
-  color: var(--color-error);
-}
-
-.filter-button-reset:hover {
-  background: var(--color-error);
-  color: white;
 }
 
 .course-card {
@@ -457,5 +479,20 @@ function goToFirstCourse() {
 
 .dashboard-hero-pattern span:nth-child(12) {
   transition-delay: 600ms;
+}
+
+.dashboard-error {
+  margin: 1.5rem 0;
+  padding: 1rem 1.2rem;
+  border-radius: 12px;
+  background: rgba(239, 65, 35, 0.08);
+  color: var(--color-primary-orange);
+  font-weight: 800;
+}
+
+.empty-state {
+  padding: 2rem;
+  color: var(--color-text-secondary);
+  font-weight: 800;
 }
 </style>
