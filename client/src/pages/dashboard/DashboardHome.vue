@@ -229,7 +229,10 @@ function mapApiCoursesForFrontend(apiCourses) {
   return apiCourses.map((course) => {
     const modules = course.modules || course.items || [];
 
+    const moduleCount = course.totalModules ?? modules.length ?? 0;
+
     const rawProgress =
+      course.progressPct ??
       course.progressPercentage ??
       course.progress?.percentage ??
       course.progress ??
@@ -243,7 +246,7 @@ function mapApiCoursesForFrontend(apiCourses) {
       description: course.description || "",
       progress,
       completed: course.completed ?? progress >= 100,
-      moduleCount: modules.length,
+      moduleCount,
       totalDuration: getTotalDuration(modules),
       modules: modules.map(mapModuleForFrontend),
     };

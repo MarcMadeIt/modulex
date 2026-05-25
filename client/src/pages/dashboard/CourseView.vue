@@ -151,10 +151,7 @@
 import { ref, computed, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
-import {
-  getCourseById,
-  completeCourse,
-} from "../../data/dummyCourseService.js";
+const API_URL = import.meta.env.VITE_API_URL;
 
 import {
   PlayCircle,
@@ -183,68 +180,109 @@ const isLastStep = computed(() => {
 });
 
 const progress = computed(() => {
-  if (!course.value) return 0;
+  if (!course.value || course.value.items.length === 0) return 0;
 
   return ((currentIndex.value + 1) / course.value.items.length) * 100;
 });
 
 onMounted(() => {
+  loadCourse();
+});
+
+async function loadCourse() {
   const id = route.params.id;
 
-  const foundCourse = getCourseById(id);
-  console.log("Found course:", foundCourse);
+  loading.value = true;
 
-  if (!foundCourse) {
+  try {
+    const courseResponse = await fetch(`${API_URL}/courses/${id}`, {
+      credentials: "include",
+    });
+
+    if (!courseResponse.ok) {
+      throw new Error(`Kunne ikke hente kursus: HTTP ${courseResponse.status}`);
+    }
+
+    const courseData = await courseResponse.json();
+
+    const modulesResponse = await fetch(`${API_URL}/courses/${id}/modules`, {
+      credentials: "include",
+    });
+
+    if (!modulesResponse.ok) {
+      throw new Error(
+        `Kunne ikke hente moduler: HTTP ${modulesResponse.status}`,
+      );
+    }
+
+    const modulesData = await modulesResponse.json();
+
+    console.log("COURSE FROM API:", courseData);
+    console.log("MODULES FROM API:", modulesData);
+
+    const apiCourse = courseData.course || courseData;
+    const apiModules = modulesData.modules || modulesData;
+
+    const modulesWithMaterials = await Promise.all(
+      apiModules.map(async (module) => {
+        const moduleId = module._id || module.id;
+
+        const moduleResponse = await fetch(
+          `${API_URL}/courses/${id}/modules/${moduleId}`,
+          {
+            credentials: "include",
+          },
+        );
+
+        if (!moduleResponse.ok) {
+          console.warn("Kunne ikke hente module details:", moduleId);
+          return module;
+        }
+
+        const moduleData = await moduleResponse.json();
+
+        return moduleData.module || moduleData;
+      }),
+    );
+
+    course.value = {
+      id: apiCourse._id || apiCourse.id,
+      title: apiCourse.title,
+      description: apiCourse.description,
+      progress: courseData.progress,
+      items: modulesWithMaterials
+        .slice()
+        .sort((a, b) => (a.order || 0) - (b.order || 0))
+        .map(mapModuleForFrontend),
+    };
+  } catch (error) {
+    console.error("CourseView fejl:", error);
+
     course.value = {
       id,
-      title: "Demo Course",
-      items: [
-        { title: "Intro", type: "video" },
-        { title: "PDF Guide", type: "pdf" },
-        { title: "Quiz", type: "quiz" },
-      ],
+      title: "Kurset kunne ikke indlæses",
+      items: [],
     };
-
+  } finally {
     loading.value = false;
-    return;
   }
+}
 
-  course.value = {
-    id: foundCourse.id,
-    title: foundCourse.title,
-    items: foundCourse.modules
-      .slice()
-      .sort((a, b) => (a.order || 0) - (b.order || 0))
-      .map((module) => {
-        return {
-          id: module._id || module.id,
-          title: module.title,
-          description: module.description,
-          duration: module.duration,
-          materials: module.materials || [],
-        };
-      }),
+function mapModuleForFrontend(module) {
+  return {
+    id: module._id || module.id,
+    title: module.title,
+    description: module.description || "",
+    duration: module.duration || "",
+    order: module.order || 0,
+    materials: module.materials || module.contents || [],
   };
-
-  if (course.value.items.length === 0) {
-    course.value.items = [
-      {
-        title: foundCourse.title,
-        type: "intro",
-        materials: [],
-      },
-    ];
-  }
-
-  loading.value = false;
-});
+}
 
 function nextStep() {
   if (!confirmed.value) return;
 
   if (isLastStep.value) {
-    completeCourse(course.value.id);
-
     router.push("/dashboard");
     return;
   }
