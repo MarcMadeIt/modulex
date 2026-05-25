@@ -70,10 +70,11 @@
           class="course-card"
           @click="openCourse(course.id)"
         >
-          <div
+          <!-- <div
             class="course-progress-top"
             :style="{ width: course.progress + '%' }"
-          />
+          /> -->
+          <ProgressBar :percentage="course.progress" />
 
           <div class="card-header">
             <div class="icon-box">
@@ -85,7 +86,7 @@
               :class="course.completed ? 'badge-success' : 'badge-muted'"
             >
               {{
-                course.completed ? "Fuldført" : course.progress + "% gennemført"
+                course.completed ? "Fuldført" : `${course.progress}% gennemført`
               }}
             </span>
           </div>
@@ -131,6 +132,7 @@ import { useRouter } from "vue-router";
 import { auth } from "../../stores/auth";
 import AppCard from "../../components/ui/AppCard.vue";
 import AppButton from "../../components/ui/AppButton.vue";
+import ProgressBar from "../../components/ui/ProgressBar.vue";
 
 import {
   BookOpen,
@@ -227,28 +229,24 @@ async function loadAuthUser() {
 
 function mapApiCoursesForFrontend(apiCourses) {
   return apiCourses.map((course) => {
-    const modules = course.modules || course.items || [];
+    const apiProgress = Number(course.progressPct) || 0;
+    const totalModules = course.totalModules ?? 0;
 
-    const moduleCount = course.totalModules ?? modules.length ?? 0;
-
-    const rawProgress =
-      course.progressPct ??
-      course.progressPercentage ??
-      course.progress?.percentage ??
-      course.progress ??
-      0;
-
-    const progress = Number(rawProgress) || 0;
+    const progress = getLocalCourseProgress(
+      course._id || course.id,
+      apiProgress,
+      totalModules,
+    );
 
     return {
       id: course._id || course.id,
       title: course.title,
       description: course.description || "",
       progress,
-      completed: course.completed ?? progress >= 100,
-      moduleCount,
-      totalDuration: getTotalDuration(modules),
-      modules: modules.map(mapModuleForFrontend),
+      completed: progress >= 100,
+      moduleCount: totalModules,
+      completedModules: course.completedModules ?? 0,
+      totalDuration: course.totalDuration ?? 0,
     };
   });
 }
@@ -290,6 +288,22 @@ function getCourseButtonText(course) {
   if (course.completed) return "Gense";
   if (course.progress > 0) return "Fortsæt";
   return "Start";
+}
+
+function getLocalCourseProgress(courseId, apiProgress = 0, totalModules = 0) {
+  const saved = localStorage.getItem(`modulex_progress_${courseId}`);
+
+  if (!saved || totalModules === 0) {
+    return apiProgress;
+  }
+
+  try {
+    const completedModuleIds = JSON.parse(saved);
+
+    return Math.round((completedModuleIds.length / totalModules) * 100);
+  } catch {
+    return apiProgress;
+  }
 }
 </script>
 

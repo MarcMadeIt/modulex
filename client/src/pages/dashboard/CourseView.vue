@@ -25,6 +25,7 @@
           class="course-progress-fill"
           :style="{ width: progress + '%' }"
         ></div>
+        <!-- <ProgressBar :percentage="course.progress" /> -->
       </div>
 
       <div class="course-content">
@@ -182,7 +183,11 @@ const isLastStep = computed(() => {
 const progress = computed(() => {
   if (!course.value || course.value.items.length === 0) return 0;
 
-  return ((currentIndex.value + 1) / course.value.items.length) * 100;
+  const completedModuleIds = getCompletedModuleIds();
+
+  return Math.round(
+    (completedModuleIds.length / course.value.items.length) * 100,
+  );
 });
 
 onMounted(() => {
@@ -255,6 +260,10 @@ async function loadCourse() {
         .sort((a, b) => (a.order || 0) - (b.order || 0))
         .map(mapModuleForFrontend),
     };
+
+    if (course.value.items.length > 0) {
+      currentIndex.value = getFirstIncompleteModuleIndex();
+    }
   } catch (error) {
     console.error("CourseView fejl:", error);
 
@@ -279,8 +288,41 @@ function mapModuleForFrontend(module) {
   };
 }
 
+// function nextStep() {
+//   if (!confirmed.value) return;
+
+//   if (isLastStep.value) {
+//     router.push("/dashboard");
+//     return;
+//   }
+
+//   currentIndex.value++;
+//   confirmed.value = false;
+// }
+
+// async function nextStep() {
+//   if (!confirmed.value || !currentStep.value) return;
+
+//   try {
+//     await markCurrentModuleCompleted();
+
+//     if (isLastStep.value) {
+//       router.push("/dashboard");
+//       return;
+//     }
+
+//     currentIndex.value++;
+//     confirmed.value = false;
+//   } catch (error) {
+//     console.error("Kunne ikke gemme progress:", error);
+//     alert("Kunne ikke gemme din progress. Prøv igen.");
+//   }
+// }
+
 function nextStep() {
-  if (!confirmed.value) return;
+  if (!confirmed.value || !currentStep.value) return;
+
+  saveCompletedModuleId(currentStep.value.id);
 
   if (isLastStep.value) {
     router.push("/dashboard");
@@ -288,18 +330,82 @@ function nextStep() {
   }
 
   currentIndex.value++;
-  confirmed.value = false;
+
+  const completedModuleIds = getCompletedModuleIds();
+  confirmed.value = completedModuleIds.includes(currentStep.value?.id);
 }
 
+async function markCurrentModuleCompleted() {
+  const response = await fetch(
+    `${API_URL}/courses/${course.value.id}/modules/${currentStep.value.id}/complete`,
+    {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(`Kunne ikke gemme progress: HTTP ${response.status}`);
+  }
+
+  return await response.json();
+}
 function prevStep() {
   if (currentIndex.value > 0) {
     currentIndex.value--;
-    confirmed.value = true;
+
+    const completedModuleIds = getCompletedModuleIds();
+    confirmed.value = completedModuleIds.includes(currentStep.value?.id);
   }
 }
 
 function exitCourse() {
   router.push("/dashboard");
+}
+
+function getProgressStorageKey() {
+  return `modulex_progress_${course.value?.id}`;
+}
+
+function getCompletedModuleIds() {
+  const key = getProgressStorageKey();
+  const saved = localStorage.getItem(key);
+
+  if (!saved) return [];
+
+  try {
+    return JSON.parse(saved);
+  } catch {
+    return [];
+  }
+}
+
+function saveCompletedModuleId(moduleId) {
+  const completedModuleIds = getCompletedModuleIds();
+
+  if (!completedModuleIds.includes(moduleId)) {
+    completedModuleIds.push(moduleId);
+  }
+
+  localStorage.setItem(
+    getProgressStorageKey(),
+    JSON.stringify(completedModuleIds),
+  );
+
+  return completedModuleIds;
+}
+
+function getFirstIncompleteModuleIndex() {
+  const completedModuleIds = getCompletedModuleIds();
+
+  const index = course.value.items.findIndex((module) => {
+    return !completedModuleIds.includes(module.id);
+  });
+
+  return index === -1 ? course.value.items.length - 1 : index;
 }
 </script>
 
