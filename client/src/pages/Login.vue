@@ -51,9 +51,9 @@
         </div>
       </form>
 
-      <div style="margin-top: 24px;">
+      <div class="forgot-login" style="margin-top: 24px;">
         <a href="#" >
-          Har du glemt dit login? Tryk her
+          Har du glemt dit login?
         </a>
       </div>
 
@@ -112,4 +112,12 @@ const handleLogin = async () => {
   font-weight: 700;
   line-height: 1.4;
 }
+
+.forgot-login a {
+  color: #555;
+  font-size: 0.9rem;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
 </style>
