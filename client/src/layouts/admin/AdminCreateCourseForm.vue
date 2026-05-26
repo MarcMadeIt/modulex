@@ -71,8 +71,6 @@ function moveMaterialDown(lesson, index) {
 }
 
 function closeModal() {
-  if (isSaving.value) return;
-
   emit("close");
 }
 // gemmer også fileUrl og size, så PDF'en kan bruges både i backend og UI.
@@ -196,7 +194,7 @@ function createNewCourse() {
 </script>
 
 <template>
-  <div class="modal-overlay">
+  <div class="modal-overlay" @click.self="closeModal">
     <div class="modal">
       <header class="modal-header">
         <div>
