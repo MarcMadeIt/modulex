@@ -3,7 +3,7 @@
         <div class="courses-header">
             <div>
                 <h1>Kursusbibliotek</h1>
-                <p>Administrér træningsmoduler, opret nye lektioner og tildel til partnere.</p>
+                <p>Administrér træningsmoduler, opret nye moduler og tildel til partnere.</p>
             </div>
 
             <button class="create-course-btn"
@@ -106,9 +106,9 @@
 
             <div class="courses-table-header">
                 <span></span>
-                <span>Kursus modul</span>
+                <span>Kursus</span>
                 <span>Beskrivelse</span>
-                <span>Lektioner</span>
+                <span>Moduler</span>
                 <span>Handlinger</span>
             </div>
 
@@ -126,7 +126,6 @@
 
                     <div>
                         <strong>{{ course.title }}</strong>
-                        <small>{{ getShortCourseId(course.id) }}</small>
                     </div>
                 </div>
 
@@ -166,7 +165,17 @@
                 </div>
             </div>
 
-            <div v-if="filteredCourses.length === 0"
+            <div v-if="coursesError"
+                 class="empty-state">
+                {{ coursesError }}
+            </div>
+
+            <div v-else-if="isLoadingCourses"
+                 class="empty-state">
+                Henter kurser...
+            </div>
+
+            <div v-else-if="filteredCourses.length === 0"
                  class="empty-state">
                 Ingen kurser matcher din søgning.
             </div>
@@ -194,20 +203,48 @@
     import AdminEditCourseModal from "./AdminEditCourseModal.vue";
     import AdminCourseAssignmentsModal from "./AdminCourseAssignmentsModal.vue";
 
-    import {
-        getCourses,
-        deleteCourse,
-        getCourseForAdmin,
-    } from "../../data/dummyCourseService.js";
+    import { getCourseForAdmin } from "../../data/dummyCourseService.js";
 
     const API_URL = import.meta.env.VITE_API_URL;
-    const ASSIGNMENTS_KEY = "modulex_course_assignments";
 
-    const courses = ref(getCourses());
-    // Partners (kunder) hentes nu fra MongoDB via /admin/customers
-    // i stedet for dummyPartners/localStorage.
+    const courses = ref([]);
+    const coursesError = ref("");
+    const isLoadingCourses = ref(true);
+
     const partners = ref([]);
     const partnersError = ref("");
+
+    function mapCourseFromApi(course) {
+        return {
+            id: course._id,
+            title: course.title,
+            description: course.description,
+            moduleCount: course.moduleCount ?? 0,
+        };
+    }
+
+    async function loadCourses() {
+        isLoadingCourses.value = true;
+        coursesError.value = "";
+
+        try {
+            const res = await fetch(`${API_URL}/admin/courses`, {
+                credentials: "include",
+            });
+
+            if (!res.ok) throw new Error("Kunne ikke hente kurser.");
+
+            const data = await res.json();
+            courses.value = Array.isArray(data.courses)
+                ? data.courses.map(mapCourseFromApi)
+                : [];
+        } catch (err) {
+            coursesError.value = err.message || "Kunne ikke hente kurser.";
+            courses.value = [];
+        } finally {
+            isLoadingCourses.value = false;
+        }
+    }
 
     async function loadPartners() {
         try {
@@ -224,7 +261,10 @@
         }
     }
 
-    onMounted(loadPartners);
+    onMounted(() => {
+        loadCourses();
+        loadPartners();
+    });
 
     const searchQuery = ref("");
     const receiverSearch = ref("");
@@ -291,28 +331,8 @@
         );
     });
 
-    function getAssignments() {
-        const savedAssignments = localStorage.getItem(ASSIGNMENTS_KEY);
-
-        if (savedAssignments) {
-            return JSON.parse(savedAssignments);
-        }
-
-        localStorage.setItem(ASSIGNMENTS_KEY, JSON.stringify({}));
-
-        return {};
-    }
-
-    function saveAssignments(assignments) {
-        localStorage.setItem(ASSIGNMENTS_KEY, JSON.stringify(assignments));
-    }
-
-    function refreshCourses() {
-        courses.value = getCourses();
-    }
-
-    function getShortCourseId(courseId) {
-        return courseId.slice(-3);
+    async function refreshCourses() {
+        await loadCourses();
     }
 
     function toggleAllCourses() {
@@ -335,23 +355,46 @@
         showReceiverDropdown.value = !showReceiverDropdown.value;
     }
 
-    function assignSelectedCoursesToPartners() {
+    async function assignSelectedCoursesToPartners() {
         if (selectedCourseIds.value.length === 0) return;
         if (selectedPartnerIds.value.length === 0) return;
 
-        const assignments = getAssignments();
+        const pairs = [];
+        for (const partnerId of selectedPartnerIds.value) {
+            for (const courseId of selectedCourseIds.value) {
+                pairs.push({ userId: partnerId, courseId });
+            }
+        }
 
-        selectedPartnerIds.value.forEach((partnerId) => {
-            const currentCourseIds = assignments[partnerId] || [];
+        // 409 (allerede tildelt) er ikke en fejl her — vi tæller den bare ikke
+        // som en ny tildeling. Andre fejlkoder lader vi boble op til UI'et.
+        const results = await Promise.all(
+            pairs.map(async ({ userId, courseId }) => {
+                try {
+                    const res = await fetch(`${API_URL}/admin/assign-course`, {
+                        method: "POST",
+                        credentials: "include",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ userId, courseId }),
+                    });
 
-            assignments[partnerId] = Array.from(
-                new Set([...currentCourseIds, ...selectedCourseIds.value])
-            );
-        });
+                    if (res.ok) return "created";
+                    if (res.status === 409) return "duplicate";
+                    return "error";
+                } catch {
+                    return "error";
+                }
+            })
+        );
 
-        saveAssignments(assignments);
+        const created = results.filter((r) => r === "created").length;
+        const failed = results.filter((r) => r === "error").length;
 
-        successMessage.value = `${selectedCourseIds.value.length} kursus/kurser er tildelt til ${selectedPartnerIds.value.length} kunde/kunder.`;
+        if (failed > 0) {
+            successMessage.value = `${created} tildelinger oprettet, ${failed} fejlede.`;
+        } else {
+            successMessage.value = `${selectedCourseIds.value.length} kursus/kurser er tildelt til ${selectedPartnerIds.value.length} kunde/kunder.`;
+        }
 
         selectedCourseIds.value = [];
         selectedPartnerIds.value = [];
@@ -380,13 +423,23 @@
     }
 
     function openEditCourse(course) {
-        selectedCourseData.value = getCourseForAdmin(course.id);
+        const data = getCourseForAdmin(course.id);
+        if (!data) {
+            alert("Redigering for MongoDB-kurser er endnu ikke understøttet.");
+            return;
+        }
+        selectedCourseData.value = data;
         editMode.value = "edit";
         showEditModal.value = true;
     }
 
     function openDuplicateCourse(course) {
-        selectedCourseData.value = getCourseForAdmin(course.id);
+        const data = getCourseForAdmin(course.id);
+        if (!data) {
+            alert("Duplikering for MongoDB-kurser er endnu ikke understøttet.");
+            return;
+        }
+        selectedCourseData.value = data;
         editMode.value = "duplicate";
         showEditModal.value = true;
     }
@@ -411,12 +464,23 @@
         selectedCourse.value = null;
     }
 
-    function removeCourse(courseId) {
+    async function removeCourse(courseId) {
         const shouldDelete = confirm("Er du sikker på, at du vil slette kurset?");
 
         if (!shouldDelete) return;
 
-        courses.value = deleteCourse(courseId);
+        try {
+            const res = await fetch(`${API_URL}/admin/courses/${courseId}`, {
+                method: "DELETE",
+                credentials: "include",
+            });
+
+            if (!res.ok) throw new Error("Kunne ikke slette kurset.");
+
+            await loadCourses();
+        } catch (err) {
+            coursesError.value = err.message || "Kunne ikke slette kurset.";
+        }
     }
 </script>
 

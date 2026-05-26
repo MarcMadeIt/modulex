@@ -5,33 +5,32 @@
     dummySurvey,
 } from "./dummyData.js";
 
-const STORAGE_KEY = "modulex_dummy_data";
 const CURRENT_USER_ID = "665000000000000000000002";
 
 function createInitialData() {
     return {
-        courses: dummyCourses,
-        modules: dummyModules,
-        userProgresses: dummyUserProgresses,
-        survey: dummySurvey,
+        courses: structuredClone(dummyCourses),
+        modules: structuredClone(dummyModules),
+        userProgresses: structuredClone(dummyUserProgresses),
+        survey: structuredClone(dummySurvey),
     };
 }
 
+// In-memory state — nulstilles per browser-session. Bruges kun af de skærme
+// der endnu ikke er migreret til MongoDB (user dashboard, edit-modal for
+// dummy-data). Rigtige kurser oprettes mod /admin/courses i MongoDB.
+let memoryData = null;
+
 function getData() {
-    const savedData = localStorage.getItem(STORAGE_KEY);
-
-    if (savedData) {
-        return JSON.parse(savedData);
+    if (!memoryData) {
+        memoryData = createInitialData();
     }
-
-    const initialData = createInitialData();
-    saveData(initialData);
-
-    return initialData;
+    return memoryData;
 }
 
-function saveData(data) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+function saveData(_data) {
+    // No-op — vi holder bare data i memoryData (mutationer sker direkte
+    // på objektet, der returneres af getData()).
 }
 
 function makeId() {
@@ -226,11 +225,8 @@ export function getSurvey() {
 }
 
 export function resetDummyData() {
-    const initialData = createInitialData();
-
-    saveData(initialData);
-
-    return initialData;
+    memoryData = createInitialData();
+    return memoryData;
 }
 
 
