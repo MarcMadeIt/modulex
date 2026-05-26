@@ -132,7 +132,7 @@ export const updateCourse = async (req: AuthRequest, res: Response) => {
     const course = await Course.findByIdAndUpdate(
       id,
       { $set: { title, description } },
-      { new: true, runValidators: true },
+      { returnDocument: "after", runValidators: true },
     );
     if (!course) {
       return res.status(404).json({ message: "Course not found" });
@@ -195,7 +195,7 @@ export const updateModule = async (req: AuthRequest, res: Response) => {
     const mod = await Module.findOneAndUpdate(
       { _id: moduleId, courseId: id },
       { $set: req.body },
-      { new: true, runValidators: true },
+      { returnDocument: "after", runValidators: true },
     );
     if (!mod) {
       return res.status(404).json({ message: "Module not found" });

@@ -33,8 +33,14 @@ const routes = [
       {
         path: "admin",
         name: "Admin",
-        meta: { roles: ["admin"] }, 
+        meta: { roles: ["admin"] },
         component: () => import("../layouts/admin/AdminDashboardHome.vue"),
+      },
+      {
+        path: "admin/courses",
+        name: "AdminCourses",
+        meta: { roles: ["admin"] },
+        component: () => import("../layouts/admin/AdminCoursesDashboard.vue"),
       },
       {
         path: "/dashboardtest",

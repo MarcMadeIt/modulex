@@ -67,7 +67,11 @@ export const submitSurvey = async (req: Request, res: Response) => {
             answers: answerList,
           },
         },
-        { upsert: true, new: true, setDefaultsOnInsert: true },
+        {
+          upsert: true,
+          returnDocument: "after",
+          setDefaultsOnInsert: true,
+        },
       );
     } catch (err) {
       // Hvis brugeren ikke fandtes i forvejen og survey-write fejler,

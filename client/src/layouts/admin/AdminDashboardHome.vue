@@ -31,7 +31,7 @@
                 </div>
 
                 <p>IGANGVÆRENDE KURSUS</p>
-                <h2>{{ courses.length }}</h2>
+                <h2>{{ aktiveKursustildelinger }}</h2>
             </AppCard>
 
             <AppCard class="stat-card">
@@ -443,6 +443,16 @@
     const klarTilKursus = computed(() => {
         return customers.value.filter(
             (customer) => customer.status !== "pending_survey",
+        );
+    });
+
+    // Sum af UserCourse-tildelinger på tværs af alle kunder.
+    // courseCount kommer fra /admin/customers (aggregeret pr. bruger på server-siden),
+    // og opdateres lokalt når vi tildeler/fjerner kurser, så tallet er live.
+    const aktiveKursustildelinger = computed(() => {
+        return customers.value.reduce(
+            (sum, customer) => sum + (customer.courseCount || 0),
+            0,
         );
     });
 

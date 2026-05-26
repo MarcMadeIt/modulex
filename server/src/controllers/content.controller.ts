@@ -161,7 +161,7 @@ export const updateContent = async (req: AuthRequest, res: Response) => {
     const item = await Content.findByIdAndUpdate(
       id,
       { $set: updates },
-      { new: true, runValidators: true },
+      { returnDocument: "after", runValidators: true },
     );
     if (!item) {
       return res.status(404).json({ message: "Content not found" });
