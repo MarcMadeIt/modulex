@@ -53,7 +53,7 @@
 
       <div class="forgot-login" style="margin-top: 24px;">
         <a href="#" >
-          Har du glemt dit login? Tryk her
+          Har du glemt dit login?
         </a>
       </div>
 
