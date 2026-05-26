@@ -164,6 +164,7 @@ export function createCourse(newCourse) {
                 courseId: course._id,
                 title: module.title,
                 description: module.description || "",
+                duration: module.duration || "",
                 order: index + 1,
                 materials: module.materials || [],
                 createdAt: new Date().toISOString(),
@@ -231,4 +232,58 @@ export function resetDummyData() {
     saveData(initialData);
 
     return initialData;
+}
+
+
+export function getCourseForAdmin(courseId) {
+    const data = getData();
+
+    const course = data.courses.find((item) => item._id === courseId);
+
+    if (!course) {
+        return null;
+    }
+
+    const modules = data.modules
+        .filter((module) => module.courseId === courseId)
+        .sort((a, b) => a.order - b.order);
+
+    return {
+        course,
+        modules,
+    };
+}
+
+export function updateCourseWithLessons(courseId, updatedCourse) {
+    const data = getData();
+
+    const course = data.courses.find((item) => item._id === courseId);
+
+    if (!course) {
+        return null;
+    }
+
+    course.title = updatedCourse.title;
+    course.description = updatedCourse.description;
+    course.updatedAt = new Date().toISOString();
+
+    data.modules = data.modules.filter((module) => module.courseId !== courseId);
+
+    updatedCourse.modules.forEach((lesson, index) => {
+        data.modules.push({
+            _id: lesson._id || makeId(),
+            courseId,
+            title: lesson.title,
+            description: lesson.description || "",
+            order: index + 1,
+            duration: lesson.duration || "",
+            materials: lesson.materials || [],
+            createdAt: lesson.createdAt || new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+        });
+    });
+
+    saveData(data);
+
+    return getCourseForAdmin(courseId);
 }

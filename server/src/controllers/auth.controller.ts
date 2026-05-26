@@ -7,10 +7,10 @@ import { AuthRequest } from "../middleware/auth.middleware";
 const COOKIE_NAME = "token";
 
 const cookieOptions = {
-  httpOnly: true, // JS kan ikke læse den → XSS-sikker
-  secure: process.env.NODE_ENV === "production", // kun HTTPS i prod (false i dev)
-  sameSite: "lax" as const, // "none" + secure:true hvis frontend/backend er på forskellige domæner
-  maxAge: 60 * 60 * 1000, // 1 time — matcher JWT expiresIn
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: "lax" as const,
+  maxAge: 60 * 60 * 1000,
 };
 
 const signToken = (user: { _id: unknown; role: string }) =>
@@ -26,14 +26,12 @@ export const signup = async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
 
-    // Check required fields
     if (!email || !password) {
       return res.status(400).json({
         message: "Email and password are required",
       });
     }
 
-    // Password validation
     if (!passwordRegex.test(password)) {
       return res.status(400).json({
         message:
@@ -41,7 +39,6 @@ export const signup = async (req: Request, res: Response) => {
       });
     }
 
-    // Find the user that was already created by the survey flow
     const user = await User.findOne({ email });
 
     if (!user) {
@@ -50,17 +47,14 @@ export const signup = async (req: Request, res: Response) => {
       });
     }
 
-    // Prevent overwriting an existing password
     if (user.password) {
       return res.status(409).json({
         message: "Password has already been created for this user",
       });
     }
 
-    // Hash password with Argon2
     const hashedPassword = await argon2.hash(password);
 
-    // Add password and activate user
     user.password = hashedPassword;
     user.status = "active";
 
@@ -70,7 +64,6 @@ export const signup = async (req: Request, res: Response) => {
     user.status = "active";
     await user.save();
 
-    // Auto-login: sæt token i httpOnly-cookie
     res.cookie(COOKIE_NAME, signToken(user), cookieOptions);
 
     return res.status(200).json({
@@ -97,20 +90,17 @@ export const login = async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
 
-    // check if user exists
     const user = await User.findOne({ email });
 
     if (!user || !user.password) {
       return res.status(401).json({ message: "Invalid email or password" });
     }
 
-    // verify password
     const isPasswordValid = await argon2.verify(user.password, password);
     if (!isPasswordValid) {
       return res.status(401).json({ message: "Invalid email or password" });
     }
 
-    // Sæt token i httpOnly-cookie
     res.cookie(COOKIE_NAME, signToken(user), cookieOptions);
 
     return res.status(200).json({
@@ -123,7 +113,6 @@ export const login = async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    // Log the error for debugging/monitoring and return a generic message
     console.error("Login error:", error);
     return res.status(500).json({
       message: "Login failed",
