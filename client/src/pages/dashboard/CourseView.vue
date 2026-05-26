@@ -225,8 +225,6 @@ async function loadCourse() {
 
     const modulesData = await modulesResponse.json();
 
-    console.log("COURSE FROM API:", courseData);
-    console.log("MODULES FROM API:", modulesData);
     const apiCourse = courseData.course || courseData;
     const apiModules = modulesData.modules || modulesData;
 
@@ -292,7 +290,12 @@ async function loadCourse() {
 
 function mapModuleForFrontend(module) {
   console.log("MODULE FROM API:", module);
-  console.log("MATERIALS FROM API:", module.materials);
+  console.log("MODULE DURATION:", {
+    title: module.title,
+    duration: module.duration,
+    expectedDuration: module.expectedDuration,
+    fullModule: module,
+  });
   return {
     id: module._id || module.id,
     title: module.title,
@@ -468,22 +471,6 @@ function exitCourse() {
   line-height: 1.6;
   color: var(--color-primary-medium);
 }
-
-/* .content-box {
-  aspect-ratio: 16 / 9;
-  background: var(--color-primary-ultralight);
-  border: 1px dashed var(--color-border);
-  border-radius: var(--radius-lg);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-3);
-  margin-bottom: var(--space-6);
-  color: var(--color-muted);
-  font-weight: 800;
-  overflow: hidden;
-} */
 
 .materials-list {
   display: grid;
