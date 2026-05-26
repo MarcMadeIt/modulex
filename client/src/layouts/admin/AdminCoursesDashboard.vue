@@ -768,7 +768,14 @@
 
     .course-description {
         color: #444;
-        line-height: 1.5;
+        font-size: 13px;
+        line-height: 1.4;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
     .lesson-count {

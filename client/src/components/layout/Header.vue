@@ -22,6 +22,14 @@
         Skift til admin
       </AppButton>
 
+      <AppButton
+        v-if="auth.role === 'admin' && route.path === '/dashboard/admin'"
+        variant="light"
+        @click="goToClient"
+      >
+        Skift til client
+      </AppButton>
+
       <div class="notification-button">🔔</div>
 
       <button
@@ -83,6 +91,10 @@ const displayRole = computed(() => {
 
 function goToAdmin() {
   router.push("/dashboard/admin");
+}
+
+function goToClient() {
+  router.push("/dashboard");
 }
 
 async function handleLogout() {
