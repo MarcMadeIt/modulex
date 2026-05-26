@@ -3,17 +3,14 @@ import { authRequired, adminOnly } from "../middleware/auth.middleware";
 import {
   getCustomers,
   getCustomerById,
-  activateCustomer,
   getAdminCourses,
   createCourse,
   updateCourse,
   deleteCourse,
-  getAdminModules,
   createModule,
   updateModule,
   deleteModule,
   assignCourse,
-  sendSurvey,
 } from "../controllers/admin.controller";
 
 const router: Router = Router();
@@ -101,45 +98,6 @@ router.get("/customers", getCustomers);
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.get("/customers/:id", getCustomerById);
-
-/**
- * @swagger
- * /admin/customers/{id}/activate:
- *   patch:
- *     summary: Activate a customer and send the registration (set-password) email
- *     tags: [Admin]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: The MongoDB ObjectId of the customer
- *         example: 664f1c2e8b1a2c3d4e5f6a7b
- *     responses:
- *       200:
- *         description: Customer moved to pending_activation and email sent
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 user:
- *                   $ref: '#/components/schemas/CustomerResponse'
- *       401:
- *         description: Not authenticated
- *       403:
- *         description: Forbidden - admin role required
- *       404:
- *         description: Customer not found
- *       409:
- *         description: Customer cannot be activated in its current status
- *       502:
- *         description: Registration email could not be sent
- */
-router.patch("/customers/:id/activate", activateCustomer);
 
 /**
  * @swagger
@@ -309,49 +267,6 @@ router.delete("/courses/:id", deleteCourse);
 /**
  * @swagger
  * /admin/courses/{id}/modules:
- *   get:
- *     summary: Get all modules for a course
- *     tags: [Admin]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: Course ID
- *         example: 664f1c2e8b1a2c3d4e5f6a7b
- *     responses:
- *       200:
- *         description: List of modules sorted by order
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 modules:
- *                   type: array
- *                   items:
- *                     $ref: '#/components/schemas/ModuleDetail'
- *       401:
- *         description: Not authenticated
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- *       403:
- *         description: Forbidden - admin role required
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- *       404:
- *         description: Course not found
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
  *   post:
  *     summary: Add a module to a course
  *     tags: [Admin]
@@ -406,7 +321,6 @@ router.delete("/courses/:id", deleteCourse);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.get("/courses/:id/modules", getAdminModules);
 router.post("/courses/:id/modules", createModule);
 
 /**
@@ -571,54 +485,5 @@ router.delete("/courses/:id/modules/:moduleId", deleteModule);
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.post("/assign-course", assignCourse);
-
-/**
- * @swagger
- * /admin/send-survey:
- *   post:
- *     summary: Send the survey email to one or more leads and save them as pending_survey users
- *     tags: [Admin]
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required: [emails]
- *             properties:
- *               emails:
- *                 type: array
- *                 items:
- *                   type: string
- *                   format: email
- *                 example: ["kunde@firma.dk", "anden@firma.dk"]
- *     responses:
- *       200:
- *         description: Result of the send operation
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 sent:
- *                   type: integer
- *                 failed:
- *                   type: array
- *                   items:
- *                     type: string
- *       400:
- *         description: Missing or invalid emails
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- *       401:
- *         description: Not authenticated
- *       403:
- *         description: Forbidden - admin role required
- */
-router.post("/send-survey", sendSurvey);
 
 export default router;

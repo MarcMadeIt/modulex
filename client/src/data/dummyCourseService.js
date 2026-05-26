@@ -164,7 +164,6 @@ export function createCourse(newCourse) {
                 courseId: course._id,
                 title: module.title,
                 description: module.description || "",
-                duration: module.duration || "",
                 order: index + 1,
                 materials: module.materials || [],
                 createdAt: new Date().toISOString(),

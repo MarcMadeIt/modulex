@@ -120,23 +120,17 @@
             </div>
 
             <footer class="create-lead-footer">
-                <p v-if="sendError"
-                   class="lead-error footer-error">
-                    {{ sendError }}
-                </p>
-
                 <button class="create-lead-btn create-lead-btn-light"
                         type="button"
-                        :disabled="sending"
                         @click="closeModal">
                     Annuller
                 </button>
 
                 <button class="create-lead-btn create-lead-btn-primary"
                         type="button"
-                        :disabled="selectedLeadCount === 0 || sending"
+                        :disabled="selectedLeadCount === 0"
                         @click="sendSurveyToLeads">
-                    {{ sending ? "Sender..." : "Send survey til leads" }}
+                    Send survey til leads
                 </button>
             </footer>
         </div>
@@ -148,14 +142,9 @@
 
     const emit = defineEmits(["close", "created"]);
 
-    const API_URL = import.meta.env.VITE_API_URL;
-
     const manualEmail = ref("");
     const manualError = ref("");
     const uploadError = ref("");
-
-    const sending = ref(false);
-    const sendError = ref("");
 
     const pendingLeads = ref([]);
 
@@ -273,48 +262,32 @@
         );
     }
 
-    async function sendSurveyToLeads() {
-        const emails = pendingLeads.value
+    function sendSurveyToLeads() {
+        const selectedLeads = pendingLeads.value
             .filter((lead) => lead.selected)
-            .map((lead) => lead.email);
+            .map((lead) => {
+                return {
+                    id: makeId(),
+                    email: lead.email,
 
-        if (emails.length === 0) return;
+                    // De her felter kommer først rigtigt senere,
+                    // når leadet har svaret på survey.
+                    name: "",
+                    company: "",
 
-        sending.value = true;
-        sendError.value = "";
-
-        try {
-            const res = await fetch(`${API_URL}/admin/send-survey`, {
-                method: "POST",
-                credentials: "include",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ emails }),
+                    status: "Survey sendt",
+                    statusClass: "waiting",
+                    surveyProgress: 35,
+                    action: "Simuler svar",
+                    surveySent: true,
+                    hasSurveyAnswers: false,
+                };
             });
 
-            const data = await res.json().catch(() => ({}));
+        if (selectedLeads.length === 0) return;
 
-            if (!res.ok) {
-                throw new Error(data.message || `HTTP ${res.status}`);
-            }
-
-            // Delvis fejl: nogle mails kunne ikke sendes -> vis besked, hold modal åben.
-            if (Array.isArray(data.failed) && data.failed.length > 0) {
-                sendError.value =
-                    `Kunne ikke sende til: ${data.failed.join(", ")}.` +
-                    (data.sent ? ` Sendt til ${data.sent}.` : "");
-                emit("created"); // leads er gemt -> opdatér dashboardet
-                return;
-            }
-
-            // Parent genhenter leads fra databasen efter afsendelse.
-            emit("created");
-            emit("close");
-        } catch (err) {
-            sendError.value =
-                err.message || "Kunne ikke sende spørgeskemaet. Prøv igen.";
-        } finally {
-            sending.value = false;
-        }
+        emit("created", selectedLeads);
+        emit("close");
     }
 
     function closeModal() {
@@ -549,11 +522,6 @@
         grid-template-columns: 1fr 1.3fr;
         gap: 16px;
         background: #fafafa;
-    }
-
-    .footer-error {
-        grid-column: 1 / -1;
-        margin: 0 0 4px;
     }
 
     .create-lead-btn {

@@ -183,17 +183,17 @@ onMounted(() => {
 
     // Der er både url og fileUrl, så PDF'er virker uanset datakilde.
     items: foundCourse.modules.flatMap((module) => {
-      return (module.materials || []).map((material) => {
-        return {
-          title: material.title || module.title,
-          description: module.description,
-          type: material.type,
-          url: material.url,
-          fileUrl: material.fileUrl,          
-          duration: material.duration || module.duration,
-        };
-      });
-    }),
+  return (module.materials || []).map((material) => {
+    return {
+      title: module.title,
+      description: module.description,
+      type: material.type,
+      url: material.url,
+      fileUrl: material.fileUrl,
+      duration: material.duration,
+    };
+  });
+}),
   };
 
   if (course.value.items.length === 0) {

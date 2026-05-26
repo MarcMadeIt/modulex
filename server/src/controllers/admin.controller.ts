@@ -6,7 +6,6 @@ import { Module } from "../models/Module";
 import { UserCourse } from "../models/UserCourse";
 import { UserProgress } from "../models/UserProgress";
 import { AuthRequest } from "../middleware/auth.middleware";
-import { sendSurveyEmail, sendRegistrationEmail } from "../utils/email";
 
 export const getCustomers = async (req: AuthRequest, res: Response) => {
   try {
@@ -81,23 +80,6 @@ export const deleteCourse = async (req: AuthRequest, res: Response) => {
   }
 };
 
-export const getAdminModules = async (req: AuthRequest, res: Response) => {
-  try {
-    const id = req.params.id as string;
-    if (!Types.ObjectId.isValid(id)) {
-      return res.status(404).json({ message: "Course not found" });
-    }
-    const course = await Course.exists({ _id: id });
-    if (!course) {
-      return res.status(404).json({ message: "Course not found" });
-    }
-    const modules = await Module.find({ courseId: id }).sort({ order: 1 });
-    return res.status(200).json({ modules });
-  } catch {
-    return res.status(500).json({ message: "Failed to fetch modules" });
-  }
-};
-
 export const createModule = async (req: AuthRequest, res: Response) => {
   try {
     const id = req.params.id as string;
@@ -108,11 +90,11 @@ export const createModule = async (req: AuthRequest, res: Response) => {
     if (!course) {
       return res.status(404).json({ message: "Course not found" });
     }
-    const { title, description, duration, order, materials } = req.body;
+    const { title, description, order, materials } = req.body;
     if (!title || order === undefined) {
       return res.status(400).json({ message: "Title and order are required" });
     }
-    const mod = await Module.create({ courseId: id, title, description, duration, order, materials });
+    const mod = await Module.create({ courseId: id, title, description, order, materials });
     return res.status(201).json({ module: mod });
   } catch {
     return res.status(500).json({ message: "Failed to create module" });
@@ -204,126 +186,5 @@ export const getCustomerById = async (req: AuthRequest, res: Response) => {
     return res.status(200).json({ user });
   } catch {
     return res.status(500).json({ message: "Failed to fetch customer" });
-  }
-};
-
-/**
- * Aktiverer en kunde (efter survey + kursustildeling): rykker status til
- * "pending_activation" og sender registreringsmailen med /signup?email=...-linket.
- * Kunden bliver "active" når de selv har oprettet en adgangskode via signup.
- */
-export const activateCustomer = async (req: AuthRequest, res: Response) => {
-  try {
-    const id = req.params.id as string;
-    if (!Types.ObjectId.isValid(id)) {
-      return res.status(404).json({ message: "Customer not found" });
-    }
-
-    const user = await User.findOne({ _id: id, role: "client" });
-    if (!user) {
-      return res.status(404).json({ message: "Customer not found" });
-    }
-
-    // Kun kunder der har udfyldt survey (pending_approval) — eller allerede er
-    // aktiveret og vil have linket igen (pending_activation) — kan aktiveres.
-    if (!["pending_approval", "pending_activation"].includes(user.status)) {
-      return res
-        .status(409)
-        .json({ message: "Kunden kan ikke aktiveres i sin nuværende status" });
-    }
-
-    // Send mailen først; status rykkes kun hvis mailen faktisk gik ud.
-    try {
-      await sendRegistrationEmail(user.email);
-    } catch (err) {
-      console.error(`Failed to send registration email to ${user.email}:`, err);
-      return res.status(502).json({
-        message:
-          "Kunne ikke sende registreringsmail. Tjek SMTP-opsætningen i .env.",
-      });
-    }
-
-    user.status = "pending_activation";
-    await user.save();
-
-    return res.status(200).json({
-      user: {
-        _id: user._id,
-        email: user.email,
-        companyName: user.companyName,
-        contactPerson: user.contactPerson,
-        phone: user.phone,
-        role: user.role,
-        status: user.status,
-      },
-    });
-  } catch (err) {
-    console.error("Activate customer error:", err);
-    return res.status(500).json({ message: "Failed to activate customer" });
-  }
-};
-
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-export const sendSurvey = async (req: AuthRequest, res: Response) => {
-  try {
-    const { emails } = req.body as { emails?: unknown };
-
-    if (!Array.isArray(emails) || emails.length === 0) {
-      return res.status(400).json({ message: "emails must be a non-empty array" });
-    }
-
-    // Normalisér, valider og fjern dubletter.
-    const normalized = [
-      ...new Set(
-        emails
-          .map((e) => String(e).trim().toLowerCase())
-          .filter((e) => EMAIL_REGEX.test(e)),
-      ),
-    ];
-
-    if (normalized.length === 0) {
-      return res.status(400).json({ message: "No valid emails provided" });
-    }
-
-    const results = await Promise.allSettled(
-      normalized.map(async (email) => {
-        // Upsert som lead. $setOnInsert sikrer at en eksisterende bruger
-        // (fx en allerede aktiv kunde) ikke nedgraderes ved gen-afsendelse.
-        await User.findOneAndUpdate(
-          { email },
-          { $setOnInsert: { email, role: "client", status: "pending_survey" } },
-          { upsert: true, setDefaultsOnInsert: true },
-        );
-        await sendSurveyEmail(email);
-      }),
-    );
-
-    const failed: string[] = [];
-    let lastError = "";
-    results.forEach((result, i) => {
-      if (result.status === "rejected") {
-        lastError = result.reason?.message || String(result.reason);
-        console.error(`Failed to send survey to ${normalized[i]}:`, result.reason);
-        failed.push(normalized[i]);
-      }
-    });
-
-    const sent = normalized.length - failed.length;
-
-    // Hvis intet kunne sendes (typisk forkerte SMTP-credentials) -> fejl tydeligt,
-    // så frontenden ikke fejlagtigt viser succes.
-    if (sent === 0) {
-      return res.status(502).json({
-        message: `Kunne ikke sende mail. Tjek SMTP-opsætningen i .env. (${lastError})`,
-        sent,
-        failed,
-      });
-    }
-
-    return res.status(200).json({ sent, failed });
-  } catch (err) {
-    console.error("Send survey error:", err);
-    return res.status(500).json({ message: "Failed to send survey" });
   }
 };
