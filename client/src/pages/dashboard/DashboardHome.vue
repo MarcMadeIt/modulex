@@ -12,7 +12,9 @@
           dine åbne moduler for at få adgang til bestillingsportalen.
         </p>
 
-        <AppButton arrow @click="goToFirstCourse"> Fortsæt træning </AppButton>
+        <AppButton arrow @click="goToFirstCourse">
+          {{ heroButtonText }}
+        </AppButton>
       </div>
 
       <div class="dashboard-hero-pattern">
@@ -25,7 +27,7 @@
       <div class="course-section-header">
         <div class="section-title">
           <span class="section-icon">🎓</span>
-          <h2>Dine kurser</h2>
+          <h2>Mine kurser</h2>
         </div>
 
         <div class="course-filters">
@@ -161,6 +163,14 @@ const filteredCourses = computed(() => {
   }
 
   return courses.value;
+});
+
+const hasStartedAnyCourse = computed(() => {
+  return courses.value.some((course) => course.progress > 0);
+});
+
+const heroButtonText = computed(() => {
+  return hasStartedAnyCourse.value ? "Fortsæt træning" : "Start onboarding";
 });
 
 onMounted(() => {
