@@ -27,9 +27,11 @@ const userSchema = new Schema<IUser>(
       lowercase: true,
       trim: true,
     },
-    companyName: { type: String, required: true, trim: true },
-    contactPerson: { type: String, required: true, trim: true },
-    phone: { type: String, required: true, trim: true },
+    // Optional pre-survey: når en lead oprettes af admin, er disse felter tomme
+    // og udfyldes først når leadet besvarer surveyen.
+    companyName: { type: String, default: "", trim: true },
+    contactPerson: { type: String, default: "", trim: true },
+    phone: { type: String, default: "", trim: true },
     password: { type: String },
     role: { type: String, enum: ["admin", "client"], default: "client" },
     status: {

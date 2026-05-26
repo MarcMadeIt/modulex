@@ -6,20 +6,48 @@ export const submitSurvey = async (req: Request, res: Response) => {
   try {
     const { email, companyName, contactPerson, phone, answers } = req.body;
 
-    const existing = await User.findOne({ email });
-    if (existing) {
+    if (!email || typeof email !== "string") {
+      return res
+        .status(400)
+        .json({ error: { message: "Email is required" } });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    const existing = await User.findOne({ email: cleanEmail });
+
+    // Hvis kunden allerede er aktiveret (har valgt password) skal de ikke
+    // kunne overskrive deres profil via survey-formularen.
+    if (
+      existing &&
+      existing.status !== "pending_survey" &&
+      existing.status !== "pending_approval"
+    ) {
       return res.status(409).json({
         error: { message: "Email is already registered" },
       });
     }
 
-    const user = await User.create({
-      email,
-      companyName,
-      contactPerson,
-      phone,
-      status: "pending_approval",
-    });
+    // Lead-flow: admin har sendt survey-mail -> bruger findes med pending_survey.
+    // Vi opdaterer det eksisterende record i stedet for at oprette en duplikat.
+    // pending_approval = bruger besvarer surveyen igen før admin har tildelt
+    // kurser -> tillad opdatering så de kan rette deres svar.
+    const user =
+      existing ??
+      (await User.create({
+        email: cleanEmail,
+        companyName,
+        contactPerson,
+        phone,
+        status: "pending_approval",
+      }));
+
+    if (existing) {
+      user.companyName = companyName ?? user.companyName;
+      user.contactPerson = contactPerson ?? user.contactPerson;
+      user.phone = phone ?? user.phone;
+      user.status = "pending_approval";
+      await user.save();
+    }
 
     // Convert answers map to array format expected by the schema.
     const answerList: IAnswer[] = Object.entries(answers ?? {}).map(
@@ -30,13 +58,23 @@ export const submitSurvey = async (req: Request, res: Response) => {
     );
 
     try {
-      await SurveyResponse.create({
-        userId: user._id,
-        userEmail: user.email,
-        answers: answerList,
-      });
+      // Upsert: hvis brugeren genindsender surveyen erstattes svarene.
+      await SurveyResponse.findOneAndUpdate(
+        { userId: user._id },
+        {
+          $set: {
+            userEmail: user.email,
+            answers: answerList,
+          },
+        },
+        { upsert: true, new: true, setDefaultsOnInsert: true },
+      );
     } catch (err) {
-      await User.deleteOne({ _id: user._id });
+      // Hvis brugeren ikke fandtes i forvejen og survey-write fejler,
+      // ryd det halve user-record op igen så vi ikke efterlader skrald.
+      if (!existing) {
+        await User.deleteOne({ _id: user._id });
+      }
       throw err;
     }
 

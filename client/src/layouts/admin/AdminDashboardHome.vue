@@ -12,12 +12,6 @@
                         @click="openCreateLeadModal">
                     + Send spørgeskema
                 </button>
-
-                <button class="create-course-btn"
-                        type="button"
-                        @click="openCreateCourseForm">
-                    + Opret kursus
-                </button>
             </div>
         </div>
 
@@ -77,8 +71,23 @@
                        placeholder="Søg efter navn, virksomhed eller mail..." />
             </div>
 
+            <div v-if="successMessage"
+                 class="success-message">
+                {{ successMessage }}
+            </div>
+
+            <div v-if="loadError"
+                 class="error-message">
+                {{ loadError }}
+            </div>
+
+            <div v-if="isLoading"
+                 class="empty-state">
+                Henter data fra serveren...
+            </div>
+
             <!-- KLAR TIL KURSUS: survey besvaret eller aktiveret. Fuld info + alle handlinger. -->
-            <template v-if="activeTab === 'partners'">
+            <template v-if="!isLoading && activeTab === 'partners'">
                 <div class="table-header">
                     <span>Partner</span>
                     <span>Status</span>
@@ -88,22 +97,22 @@
 
                 <div class="partner-row"
                      v-for="person in filteredKlarTilKursus"
-                     :key="person.id">
+                     :key="person._id">
                     <div class="partner-info">
-                        <strong>{{ person.name || person.email }}</strong>
+                        <strong>{{ person.contactPerson || person.email }}</strong>
                         <p>Mail: {{ person.email }}</p>
-                        <p v-if="person.company">Virksomhed: {{ person.company }}</p>
+                        <p v-if="person.companyName">Virksomhed: {{ person.companyName }}</p>
 
-                        <small v-if="getAssignedCourseCount(person.id) > 0"
+                        <small v-if="getAssignedCourseCount(person._id) > 0"
                                class="assigned-count"
                                @click="openAssignModal(person)">
-                            {{ getAssignedCourseCount(person.id) }} kursus/kurser tildelt · rediger
+                            {{ getAssignedCourseCount(person._id) }} kursus/kurser tildelt · rediger
                         </small>
                     </div>
 
                     <span class="status"
-                          :class="person.statusClass">
-                        {{ person.status }}
+                          :class="statusClassFor(person.status)">
+                        {{ statusLabelFor(person.status) }}
                     </span>
 
                     <button class="survey-btn"
@@ -113,27 +122,34 @@
                     </button>
 
                     <div class="lead-action-buttons">
-                        <button v-if="person.statusClass === 'active' || person.statusClass === 'approved'"
-                                class="survey-btn"
+                        <!--
+                            Én knap fra start. Når der ikke er tildelt kurser endnu
+                            kalder den modalen ("Tildel kurser"). Når der allerede er
+                            tildelt kurser bliver det til "Gensend kursus" og kalder
+                            resend-endpointet på serveren.
+                        -->
+                        <button v-if="getAssignedCourseCount(person._id) === 0"
+                                class="approve-btn"
                                 type="button"
                                 @click="openAssignModal(person)">
-                            Rediger kurser
+                            Tildel kurser
                         </button>
 
-                        <template v-else>
-                            <button class="survey-btn"
-                                    type="button"
-                                    @click="openAssignModal(person)">
-                                Tildel kurser
-                            </button>
+                        <button v-else
+                                class="resend-btn"
+                                type="button"
+                                :disabled="resendingForId === person._id"
+                                @click="resendCoursesFor(person)">
+                            {{ resendingForId === person._id ? "Sender..." : "Gensend kursus" }}
+                        </button>
 
-                            <button class="approve-btn"
-                                    type="button"
-                                    :disabled="getAssignedCourseCount(person.id) === 0"
-                                    @click="activateLeadAndSendCourses(person)">
-                                Aktiver kunde / send kurser
-                            </button>
-                        </template>
+                        <button class="delete-btn"
+                                type="button"
+                                title="Slet kunde"
+                                :disabled="deletingForId === person._id"
+                                @click="deleteCustomer(person)">
+                            <Trash2 :size="16" />
+                        </button>
                     </div>
                 </div>
 
@@ -144,40 +160,39 @@
             </template>
 
             <!-- IGANGVÆRENDE: survey sendt, afventer svar. Minimal visning. -->
-            <template v-if="activeTab === 'leads'">
+            <template v-if="!isLoading && activeTab === 'leads'">
                 <div class="table-header">
                     <span>Lead</span>
                     <span>Status</span>
                     <span>Survey</span>
-                    <span>Handling</span>
+                    <span>Handlinger</span>
                 </div>
 
                 <div class="partner-row"
                      v-for="lead in filteredIgangvaerende"
-                     :key="lead.id">
+                     :key="lead._id">
                     <div class="partner-info">
                         <strong>{{ lead.email }}</strong>
+                        <p>Oprettet: {{ formatDate(lead.createdAt) }}</p>
                     </div>
 
-                    <span class="status"
-                          :class="lead.statusClass">
-                        {{ lead.status }}
+                    <span class="status waiting">
+                        Survey sendt
                     </span>
 
                     <div class="lead-progress">
-                        <div class="lead-progress-bar">
-                            <div class="lead-progress-fill"
-                                 :style="{ width: lead.surveyProgress + '%' }"></div>
-                        </div>
-
-                        <small>{{ lead.surveyProgress }}% udfyldt</small>
+                        <small>Afventer svar</small>
                     </div>
 
-                    <button class="approve-btn"
-                            type="button"
-                            @click="handleLeadAction(lead)">
-                        {{ lead.action }}
-                    </button>
+                    <div class="lead-action-buttons">
+                        <button class="delete-btn"
+                                type="button"
+                                title="Slet lead"
+                                :disabled="deletingForId === lead._id"
+                                @click="deleteCustomer(lead)">
+                            <Trash2 :size="16" />
+                        </button>
+                    </div>
                 </div>
 
                 <div v-if="filteredIgangvaerende.length === 0"
@@ -193,7 +208,7 @@
             <div class="assign-modal">
                 <header class="assign-modal-header">
                     <div>
-                        <h2>Tildel kurser til {{ selectedPartner.name || selectedPartner.email }}</h2>
+                        <h2>Tildel kurser til {{ selectedPartner.contactPerson || selectedPartner.email }}</h2>
                         <p>Vælg de kurser som denne kunde skal gennemgå.</p>
                     </div>
 
@@ -212,23 +227,33 @@
 
                 <div class="assign-course-list">
                     <button v-for="course in filteredCourses"
-                            :key="course.id"
+                            :key="course._id"
                             class="assign-course-card"
                             :class="{
-              'assign-course-card-active': selectedCourseIds.includes(course.id)
+              'assign-course-card-active': selectedCourseIds.includes(course._id)
             }"
                             type="button"
-                            @click="toggleCourse(course.id)">
+                            @click="toggleCourse(course._id)">
                         <div>
                             <strong>{{ course.title }}</strong>
                             <p>{{ course.description }}</p>
                         </div>
 
                         <span class="assign-icon">
-                            {{ selectedCourseIds.includes(course.id) ? "✓" : "+" }}
+                            {{ selectedCourseIds.includes(course._id) ? "✓" : "+" }}
                         </span>
                     </button>
+
+                    <div v-if="filteredCourses.length === 0"
+                         class="empty-state">
+                        Ingen kurser fundet.
+                    </div>
                 </div>
+
+                <p v-if="assignError"
+                   class="lead-error assign-error">
+                    {{ assignError }}
+                </p>
 
                 <footer class="assign-modal-footer">
                     <button class="assign-btn assign-btn-light"
@@ -239,8 +264,9 @@
 
                     <button class="assign-btn assign-btn-dark"
                             type="button"
+                            :disabled="isSavingAssignment"
                             @click="saveAssignedCourses">
-                        Gem ændringer
+                        {{ isSavingAssignment ? "Gemmer..." : "Gem ændringer" }}
                     </button>
                 </footer>
             </div>
@@ -255,8 +281,8 @@
                         <h2>Survey svar</h2>
                         <p>
                             {{ selectedSurveyPerson.email }}
-                            <span v-if="selectedSurveyPerson.company">
-                                · {{ selectedSurveyPerson.company }}
+                            <span v-if="selectedSurveyPerson.companyName">
+                                · {{ selectedSurveyPerson.companyName }}
                             </span>
                         </p>
                     </div>
@@ -269,20 +295,24 @@
                 </header>
 
                 <div class="survey-answer-list">
-                    <div class="survey-answer-card">
-                        <strong>Hvilken type virksomhed har I?</strong>
-                        <p>{{ selectedSurveyPerson.company || "Ikke angivet endnu" }}</p>
+                    <div v-if="loadingSurvey"
+                         class="empty-state">
+                        Henter survey-svar...
                     </div>
 
-                    <div class="survey-answer-card">
-                        <strong>Hvor meget erfaring har I med Modulex produkter?</strong>
-                        <p>Vi har lidt erfaring og ønsker oplæring i bestillingsflowet.</p>
-                    </div>
+                    <template v-else>
+                        <div v-if="surveyAnswers.length === 0"
+                             class="empty-state">
+                            Ingen survey-svar registreret endnu.
+                        </div>
 
-                    <div class="survey-answer-card">
-                        <strong>Hvad vil I helst lære først?</strong>
-                        <p>Vi vil gerne starte med konfiguration, bestilling og brand guidelines.</p>
-                    </div>
+                        <div v-for="(answer, index) in surveyAnswers"
+                             :key="answer.questionId || index"
+                             class="survey-answer-card">
+                            <strong>{{ answer.questionId }}</strong>
+                            <p>{{ formatAnswer(answer.answer) }}</p>
+                        </div>
+                    </template>
                 </div>
 
                 <footer class="assign-modal-footer">
@@ -295,82 +325,135 @@
             </div>
         </div>
 
+        <!-- BEKRÆFT SLETNING MODAL -->
+        <div v-if="showDeleteModal && pendingDeletePerson"
+             class="assign-modal-overlay"
+             @click.self="closeDeleteModal">
+            <div class="confirm-modal">
+                <header class="assign-modal-header">
+                    <div>
+                        <h2>Slet kunde?</h2>
+                        <p>
+                            Du er ved at slette
+                            <strong>{{ pendingDeletePerson.contactPerson || pendingDeletePerson.email }}</strong>.
+                            Alle kursustildelinger og survey-svar fjernes også.
+                            Handlingen kan ikke fortrydes.
+                        </p>
+                    </div>
+
+                    <button class="assign-modal-close"
+                            type="button"
+                            :disabled="!!deletingForId"
+                            @click="closeDeleteModal">
+                        ×
+                    </button>
+                </header>
+
+                <p v-if="deleteError"
+                   class="lead-error assign-error">
+                    {{ deleteError }}
+                </p>
+
+                <footer class="assign-modal-footer">
+                    <button class="assign-btn assign-btn-light"
+                            type="button"
+                            :disabled="!!deletingForId"
+                            @click="closeDeleteModal">
+                        Annuller
+                    </button>
+
+                    <button class="assign-btn assign-btn-danger"
+                            type="button"
+                            :disabled="!!deletingForId"
+                            @click="confirmDelete">
+                        {{ deletingForId ? "Sletter..." : "Slet kunde" }}
+                    </button>
+                </footer>
+            </div>
+        </div>
+
         <CreateLeadModal v-if="showCreateLeadModal"
                          @close="closeCreateLeadModal"
                          @created="handleLeadCreated" />
-
-        <AdminCreateCourseForm v-if="showCreateCourseForm"
-                               @close="closeCreateCourseForm" />
     </div>
 </template>
 
 <script setup>
-    import { computed, ref } from "vue";
+    import { computed, onMounted, ref } from "vue";
 
     import AppCard from "../../components/ui/AppCard.vue";
     import CreateLeadModal from "./CreateLeadModal.vue";
-    import AdminCreateCourseForm from "./AdminCreateCourseForm.vue";
 
     import {
         Users,
         BookOpen,
         TrendingUp,
+        Trash2,
     } from "lucide-vue-next";
 
-    import {
-        dummyPartners,
-        dummyLeads,
-        dummyCourseAssignments,
-    } from "../../data/dummyData.js";
-
-    import { getCourses } from "../../data/dummyCourseService.js";
-
-    const ASSIGNMENTS_KEY = "modulex_course_assignments";
-    const LEADS_KEY = "modulex_dummy_leads";
-    const PARTNERS_KEY = "modulex_dummy_partners";
+    const API_URL = import.meta.env.VITE_API_URL;
 
     const activeTab = ref("partners");
     const searchQuery = ref("");
 
-    const courses = ref(getCourses());
+    // Alle data hentes nu fra MongoDB via serveren.
+    const customers = ref([]);
+    const courses = ref([]);
+    // assignmentsByUserId[userId] = string[] med courseIds.
+    // Holdes lokalt så Tildel-modalen ved hvad der er valgt.
+    const assignmentsByUserId = ref({});
 
-    const partners = ref(getSavedPartners());
-    const leads = ref(getSavedLeads());
+    const isLoading = ref(true);
+    const loadError = ref("");
+    const successMessage = ref("");
 
     const showAssignModal = ref(false);
     const selectedPartner = ref(null);
     const selectedCourseIds = ref([]);
+    // Holder de oprindelige assignments når modalen åbnes, så vi kan
+    // diffe og kun POSTe/DELETE'e det der er ændret.
+    const initialSelectedCourseIds = ref([]);
     const courseSearch = ref("");
-    const refreshKey = ref(0);
-    const showCreateCourseModal = ref(false);
+    const isSavingAssignment = ref(false);
+    const assignError = ref("");
+    const resendingForId = ref("");
+    const deletingForId = ref("");
+
+    const showDeleteModal = ref(false);
+    const pendingDeletePerson = ref(null);
+    const deleteError = ref("");
 
     const showCreateLeadModal = ref(false);
-    const showCreateCourseForm = ref(false);
 
     const showSurveyModal = ref(false);
     const selectedSurveyPerson = ref(null);
+    const surveyAnswers = ref([]);
+    const loadingSurvey = ref(false);
 
-    // Status-baseret opdeling. Matcher User.status enum på serveren:
+    // Status-mapping mod User.status enum på serveren:
     //   pending_survey   -> Igangværende  (survey sendt, afventer svar)
-    //   pending_approval -> Klar til kursus (survey besvaret, klar til kursustildeling)
-    //   pending_activation / active -> Klar til kursus (sendt + aktiveret kunde)
+    //   pending_approval -> Klar til kursus (survey besvaret, klar til tildeling)
+    //   pending_activation / active -> Klar til kursus (kurser tildelt / aktiveret)
     const igangvaerende = computed(() => {
-        return leads.value.filter((lead) => !hasSurveyAnswers(lead));
+        return customers.value.filter(
+            (customer) => customer.status === "pending_survey",
+        );
     });
 
     const klarTilKursus = computed(() => {
-        const besvaredeLeads = leads.value.filter((lead) => hasSurveyAnswers(lead));
-        return [...besvaredeLeads, ...partners.value];
+        return customers.value.filter(
+            (customer) => customer.status !== "pending_survey",
+        );
     });
 
     function matchesSearch(person, search) {
-        const name = (person.name || "").toLowerCase();
-        const company = (person.company || "").toLowerCase();
+        const contactPerson = (person.contactPerson || "").toLowerCase();
+        const companyName = (person.companyName || "").toLowerCase();
         const email = (person.email || "").toLowerCase();
 
         return (
-            name.includes(search) ||
-            company.includes(search) ||
+            contactPerson.includes(search) ||
+            companyName.includes(search) ||
             email.includes(search)
         );
     }
@@ -397,92 +480,86 @@
         if (!search) return courses.value;
 
         return courses.value.filter((course) => {
+            const title = course.title || "";
+            const description = course.description || "";
+
             return (
-                course.title.toLowerCase().includes(search) ||
-                course.description.toLowerCase().includes(search)
+                title.toLowerCase().includes(search) ||
+                description.toLowerCase().includes(search)
             );
         });
     });
 
-    function hasSurveyAnswers(lead) {
-        return lead.hasSurveyAnswers || lead.surveyProgress === 100;
+    function statusLabelFor(status) {
+        if (status === "pending_approval") return "Survey besvaret";
+        if (status === "pending_activation") return "Klar til afsendelse";
+        if (status === "active") return "Aktiv";
+        return status || "Ukendt";
     }
 
-    function normalizeLead(lead) {
-        // Surveyen sendes altid ved leadoprettelse (Send spørgeskema -> nodemailer),
-        // så leads i Igangværende har altid surveySent=true. Den eneste lead-handling
-        // herfra er "Simuler svar" (til test).
-        return {
-            id: lead.id || crypto.randomUUID(),
-            email: lead.email || "",
-            name: lead.name || "",
-            company: lead.company || "",
-            status: lead.status || "Survey sendt",
-            statusClass: lead.statusClass || "waiting",
-            surveyProgress: lead.surveyProgress ?? 35,
-            action: "Simuler svar",
-            surveySent: true,
-            hasSurveyAnswers:
-                lead.hasSurveyAnswers ?? lead.surveyProgress === 100,
-        };
+    function statusClassFor(status) {
+        if (status === "pending_approval") return "lead-ready";
+        if (status === "pending_activation") return "approved";
+        if (status === "active") return "active";
+        return "waiting";
     }
 
-    function refreshCourses() {
-        courses.value = getCourses();
+    function formatDate(value) {
+        if (!value) return "";
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return "";
+        return date.toLocaleDateString("da-DK", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+        });
     }
 
-    function openCreateCourseForm() {
-        showCreateCourseForm.value = true;
+    function formatAnswer(answer) {
+        if (Array.isArray(answer)) return answer.join(", ");
+        return String(answer ?? "");
     }
 
-    function closeCreateCourseForm() {
-        showCreateCourseForm.value = false;
-        refreshCourses();
-    }
-
-    function getSavedPartners() {
-        const savedPartners = localStorage.getItem(PARTNERS_KEY);
-
-        if (savedPartners) return JSON.parse(savedPartners);
-
-        localStorage.setItem(PARTNERS_KEY, JSON.stringify(dummyPartners));
-
-        return [...dummyPartners];
-    }
-
-    function savePartners() {
-        localStorage.setItem(PARTNERS_KEY, JSON.stringify(partners.value));
-    }
-
-    function getSavedLeads() {
-        const savedLeads = localStorage.getItem(LEADS_KEY);
-
-        if (savedLeads) {
-            return JSON.parse(savedLeads).map((lead) => normalizeLead(lead));
-        }
-
-        const initialLeads = dummyLeads.map((lead) => {
-            return normalizeLead({
-                ...lead,
-                name: "",
-                company: "",
-                status: "Survey sendt",
-                statusClass: "waiting",
-                surveyProgress: 35,
-                action: "Simuler svar",
-                surveySent: true,
-                hasSurveyAnswers: false,
-            });
+    async function loadCustomers() {
+        const res = await fetch(`${API_URL}/admin/customers`, {
+            credentials: "include",
         });
 
-        localStorage.setItem(LEADS_KEY, JSON.stringify(initialLeads));
+        if (!res.ok) throw new Error("Kunne ikke hente kunder.");
 
-        return initialLeads;
+        const data = await res.json();
+        const list = Array.isArray(data.users) ? data.users : [];
+
+        customers.value = list;
+
+        return list;
     }
 
-    function saveLeads() {
-        localStorage.setItem(LEADS_KEY, JSON.stringify(leads.value));
+    async function loadCourses() {
+        const res = await fetch(`${API_URL}/admin/courses`, {
+            credentials: "include",
+        });
+
+        if (!res.ok) throw new Error("Kunne ikke hente kurser.");
+
+        const data = await res.json();
+        courses.value = Array.isArray(data.courses) ? data.courses : [];
     }
+
+    async function loadAll() {
+        isLoading.value = true;
+        loadError.value = "";
+
+        try {
+            await Promise.all([loadCustomers(), loadCourses()]);
+        } catch (err) {
+            loadError.value = err.message || "Kunne ikke hente data.";
+        } finally {
+            isLoading.value = false;
+        }
+    }
+
+    onMounted(loadAll);
 
     function openCreateLeadModal() {
         showCreateLeadModal.value = true;
@@ -493,155 +570,109 @@
     }
 
     function handleLeadCreated(newLeads) {
+        // CreateLeadModal returnerer rigtige user-objekter fra serveren.
         const leadsToAdd = Array.isArray(newLeads) ? newLeads : [newLeads];
 
-        const normalizedLeads = leadsToAdd
-            .map((lead) => normalizeLead(lead))
-            .filter((lead) => {
-                return !leads.value.some(
-                    (existingLead) =>
-                        existingLead.email.toLowerCase() === lead.email.toLowerCase()
-                );
-            });
+        const filteredNewLeads = leadsToAdd.filter((lead) => {
+            return !customers.value.some(
+                (existing) => existing._id === lead._id,
+            );
+        });
 
-        leads.value.unshift(...normalizedLeads);
-
-        saveLeads();
+        customers.value = [...filteredNewLeads, ...customers.value];
 
         activeTab.value = "leads";
     }
 
-    function handleLeadAction(lead) {
-        // "Send survey" -> markér som sendt, vis Simuler svar herefter.
-        if (lead.action === "Send survey") {
-            lead.status = "Survey sendt";
-            lead.statusClass = "waiting";
-            lead.surveyProgress = 0;
-            lead.action = "Simuler svar";
-            lead.surveySent = true;
-
-            saveLeads();
-            return;
-        }
-
-        // "Simuler svar" -> simulér at kunden har udfyldt surveyen og
-        // ryk leadet over i "Klar til kursus" tab.
-        if (lead.action === "Simuler svar") {
-            const emailName = lead.email.split("@")[0];
-            const emailDomain = lead.email.split("@")[1] || "ukendt.dk";
-
-            lead.name = emailName;
-            lead.company = emailDomain;
-            lead.status = "Survey besvaret";
-            lead.statusClass = "lead-ready";
-            lead.surveyProgress = 100;
-            lead.action = "Afventer kursustildeling";
-            lead.hasSurveyAnswers = true;
-
-            saveLeads();
-
-            activeTab.value = "partners";
-        }
-        // Simulér at kunden har udfyldt surveyen og ryk leadet
-        // over i "Klar til kursus" tab. Bruges kun til test.
-        const emailName = lead.email.split("@")[0];
-        const emailDomain = lead.email.split("@")[1] || "ukendt.dk";
-
-        lead.name = emailName;
-        lead.company = emailDomain;
-        lead.status = "Survey besvaret";
-        lead.statusClass = "lead-ready";
-        lead.surveyProgress = 100;
-        lead.action = "Afventer kursustildeling";
-        lead.hasSurveyAnswers = true;
-
-        saveLeads();
-
-        activeTab.value = "partners";
-
-    }
-
-    function activateLeadAndSendCourses(lead) {
-        const assignedCourseCount = getAssignedCourseCount(lead.id);
-
-        if (assignedCourseCount === 0) {
-            alert("Du skal først tildele mindst ét kursus til kunden.");
-            return;
-        }
-
-        partners.value.unshift({
-            id: lead.id,
-            name: lead.name || lead.email,
-            email: lead.email,
-            company: lead.company || "Ikke angivet",
-            status: "I gang",
-            statusClass: "active",
-            action: "Tildel kurser",
-        });
-
-        leads.value = leads.value.filter((item) => item.id !== lead.id);
-
-        savePartners();
-        saveLeads();
-
-        activeTab.value = "partners";
-    }
-
-    function openSurveyAnswers(person) {
+    async function openSurveyAnswers(person) {
         selectedSurveyPerson.value = person;
         showSurveyModal.value = true;
+        surveyAnswers.value = [];
+
+        // pending_survey har endnu ikke svaret.
+        if (person.status === "pending_survey") return;
+
+        loadingSurvey.value = true;
+
+        try {
+            const res = await fetch(`${API_URL}/survey/${person._id}`, {
+                credentials: "include",
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                surveyAnswers.value = data?.response?.answers || [];
+            } else {
+                surveyAnswers.value = [];
+            }
+        } catch {
+            surveyAnswers.value = [];
+        } finally {
+            loadingSurvey.value = false;
+        }
     }
 
     function closeSurveyAnswers() {
         selectedSurveyPerson.value = null;
         showSurveyModal.value = false;
-    }
-
-    function getAssignments() {
-        const savedAssignments = localStorage.getItem(ASSIGNMENTS_KEY);
-
-        if (savedAssignments) return JSON.parse(savedAssignments);
-
-        localStorage.setItem(
-            ASSIGNMENTS_KEY,
-            JSON.stringify(dummyCourseAssignments)
-        );
-
-        return dummyCourseAssignments;
-    }
-
-    function saveAssignments(assignments) {
-        localStorage.setItem(ASSIGNMENTS_KEY, JSON.stringify(assignments));
+        surveyAnswers.value = [];
     }
 
     function getAssignedCourseCount(personId) {
-        refreshKey.value;
+        const assigned = assignmentsByUserId.value[personId];
+        if (assigned) return assigned.length;
 
-        const assignments = getAssignments();
-
-        return assignments[personId]?.length || 0;
+        // Fallback til courseCount der kommer fra /admin/customers
+        // (sat på første load, så vi viser korrekt knap fra start).
+        const customer = customers.value.find((c) => c._id === personId);
+        return customer?.courseCount ?? 0;
     }
 
-    function openAssignModal(person) {
-        const assignments = getAssignments();
-
+    async function openAssignModal(person) {
         selectedPartner.value = person;
-        selectedCourseIds.value = assignments[person.id] || [];
         courseSearch.value = "";
+        assignError.value = "";
         showAssignModal.value = true;
+
+        // Hent eksisterende tildelinger for denne kunde.
+        try {
+            const res = await fetch(
+                `${API_URL}/admin/customers/${person._id}/courses`,
+                { credentials: "include" },
+            );
+
+            if (res.ok) {
+                const data = await res.json();
+                const courseIds = (data.assignments || []).map((a) =>
+                    String(a.courseId),
+                );
+
+                selectedCourseIds.value = courseIds;
+                initialSelectedCourseIds.value = [...courseIds];
+                assignmentsByUserId.value[person._id] = courseIds;
+            } else {
+                selectedCourseIds.value = [];
+                initialSelectedCourseIds.value = [];
+            }
+        } catch {
+            selectedCourseIds.value = [];
+            initialSelectedCourseIds.value = [];
+        }
     }
 
     function closeAssignModal() {
         showAssignModal.value = false;
         selectedPartner.value = null;
         selectedCourseIds.value = [];
+        initialSelectedCourseIds.value = [];
         courseSearch.value = "";
+        assignError.value = "";
     }
 
     function toggleCourse(courseId) {
         if (selectedCourseIds.value.includes(courseId)) {
             selectedCourseIds.value = selectedCourseIds.value.filter(
-                (id) => id !== courseId
+                (id) => id !== courseId,
             );
 
             return;
@@ -650,18 +681,204 @@
         selectedCourseIds.value.push(courseId);
     }
 
-    function saveAssignedCourses() {
+    async function saveAssignedCourses() {
         if (!selectedPartner.value) return;
 
-        const assignments = getAssignments();
+        isSavingAssignment.value = true;
+        assignError.value = "";
 
-        assignments[selectedPartner.value.id] = selectedCourseIds.value;
+        const partnerId = selectedPartner.value._id;
+        const next = new Set(selectedCourseIds.value.map(String));
+        const prev = new Set(initialSelectedCourseIds.value.map(String));
 
-        saveAssignments(assignments);
+        const toAdd = [...next].filter((id) => !prev.has(id));
+        const toRemove = [...prev].filter((id) => !next.has(id));
 
-        refreshKey.value++;
+        try {
+            await Promise.all([
+                ...toAdd.map((courseId) =>
+                    fetch(`${API_URL}/admin/assign-course`, {
+                        method: "POST",
+                        credentials: "include",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ userId: partnerId, courseId }),
+                    }).then(async (res) => {
+                        // 409 = allerede tildelt, det er fint.
+                        if (!res.ok && res.status !== 409) {
+                            const body = await res.json().catch(() => ({}));
+                            throw new Error(
+                                body.message || "Kunne ikke tildele kursus.",
+                            );
+                        }
+                    }),
+                ),
+                ...toRemove.map((courseId) =>
+                    fetch(
+                        `${API_URL}/admin/customers/${partnerId}/courses/${courseId}`,
+                        { method: "DELETE", credentials: "include" },
+                    ).then(async (res) => {
+                        if (!res.ok && res.status !== 404) {
+                            const body = await res.json().catch(() => ({}));
+                            throw new Error(
+                                body.message || "Kunne ikke fjerne kursus.",
+                            );
+                        }
+                    }),
+                ),
+            ]);
 
-        closeAssignModal();
+            // Opdater lokal cache så knappen straks viser "Gensend kursus".
+            assignmentsByUserId.value = {
+                ...assignmentsByUserId.value,
+                [partnerId]: [...next],
+            };
+
+            // Opdater også courseCount på den enkelte customer.
+            customers.value = customers.value.map((c) =>
+                c._id === partnerId ? { ...c, courseCount: next.size } : c,
+            );
+
+            const partnerLabel =
+                selectedPartner.value.contactPerson ||
+                selectedPartner.value.email;
+            const partnerEmail = selectedPartner.value.email;
+            const wasFirstAssignment = prev.size === 0 && next.size > 0;
+
+            closeAssignModal();
+
+            if (wasFirstAssignment) {
+                // Første gang kunden får kurser tildelt -> send kursus-mail
+                // automatisk så de får signup-linket. Knappen skifter til
+                // "Gensend kursus" derefter.
+                try {
+                    const res = await fetch(
+                        `${API_URL}/admin/customers/${partnerId}/resend-courses`,
+                        { method: "POST", credentials: "include" },
+                    );
+                    const body = await res.json().catch(() => ({}));
+                    if (!res.ok) {
+                        throw new Error(body.message || "Mail-afsending fejlede.");
+                    }
+                    if (body.status) {
+                        customers.value = customers.value.map((c) =>
+                            c._id === partnerId ? { ...c, status: body.status } : c,
+                        );
+                    }
+                    showSuccess(
+                        `${next.size} kursus/kurser tildelt. Kursusmail sendt til ${partnerEmail}.`,
+                    );
+                } catch (err) {
+                    loadError.value =
+                        err.message ||
+                        "Kurserne blev tildelt, men mailen kunne ikke sendes.";
+                }
+            } else {
+                showSuccess(
+                    `${next.size} kursus/kurser tildelt til ${partnerLabel}.`,
+                );
+            }
+        } catch (err) {
+            assignError.value = err.message || "Noget gik galt under tildeling.";
+        } finally {
+            isSavingAssignment.value = false;
+        }
+    }
+
+    // Åbner bekræftelses-modalen i stedet for window.confirm.
+    function deleteCustomer(person) {
+        pendingDeletePerson.value = person;
+        deleteError.value = "";
+        showDeleteModal.value = true;
+    }
+
+    function closeDeleteModal() {
+        if (deletingForId.value) return;
+        showDeleteModal.value = false;
+        pendingDeletePerson.value = null;
+        deleteError.value = "";
+    }
+
+    async function confirmDelete() {
+        const person = pendingDeletePerson.value;
+        if (!person) return;
+
+        const label = person.contactPerson || person.email;
+        deletingForId.value = person._id;
+        deleteError.value = "";
+
+        try {
+            const res = await fetch(
+                `${API_URL}/admin/customers/${person._id}`,
+                { method: "DELETE", credentials: "include" },
+            );
+
+            if (!res.ok) {
+                const body = await res.json().catch(() => ({}));
+                throw new Error(body.message || "Sletning fejlede.");
+            }
+
+            customers.value = customers.value.filter(
+                (c) => c._id !== person._id,
+            );
+
+            // Ryd op i lokal assignments cache så vi ikke peger
+            // på en bruger som ikke længere findes.
+            if (assignmentsByUserId.value[person._id]) {
+                const next = { ...assignmentsByUserId.value };
+                delete next[person._id];
+                assignmentsByUserId.value = next;
+            }
+
+            showSuccess(`${label} er slettet.`);
+            showDeleteModal.value = false;
+            pendingDeletePerson.value = null;
+        } catch (err) {
+            deleteError.value = err.message || "Kunne ikke slette kunden.";
+        } finally {
+            deletingForId.value = "";
+        }
+    }
+
+    async function resendCoursesFor(person) {
+        resendingForId.value = person._id;
+
+        try {
+            const res = await fetch(
+                `${API_URL}/admin/customers/${person._id}/resend-courses`,
+                { method: "POST", credentials: "include" },
+            );
+
+            const data = await res.json().catch(() => ({}));
+
+            if (!res.ok) {
+                throw new Error(data.message || "Gensending fejlede.");
+            }
+
+            // Serveren rykker fx pending_approval -> pending_activation
+            // når mailen er sendt; opdater lokalt så status-pillen passer.
+            if (data.status) {
+                customers.value = customers.value.map((c) =>
+                    c._id === person._id ? { ...c, status: data.status } : c,
+                );
+            }
+
+            showSuccess(
+                `Kursusmail gensendt til ${person.email}.`,
+            );
+        } catch (err) {
+            loadError.value = err.message || "Kunne ikke gensende kursusmail.";
+        } finally {
+            resendingForId.value = "";
+        }
+    }
+
+    let successTimeout = null;
+    function showSuccess(message) {
+        successMessage.value = message;
+        if (successTimeout) clearTimeout(successTimeout);
+        successTimeout = setTimeout(() => {
+            successMessage.value = "";
+        }, 3500);
     }
 </script>
 
@@ -691,24 +908,14 @@
         gap: 12px;
     }
 
-    .create-course-btn,
     .create-lead-btn {
         border: none;
         padding: 14px 24px;
         border-radius: 10px;
         cursor: pointer;
         font-weight: 700;
-    }
-
-    .create-course-btn {
         background: #171717;
         color: white;
-    }
-
-    .create-lead-btn {
-        background: white;
-        color: #171717;
-        border: 1px solid #ddd;
     }
 
     .stats-grid {
@@ -795,6 +1002,24 @@
             padding: 14px 16px;
             font-size: 14px;
         }
+
+    .success-message {
+        background: #ecfdf3;
+        color: #128a3d;
+        border-radius: 12px;
+        padding: 12px 16px;
+        margin-bottom: 16px;
+        font-weight: 700;
+    }
+
+    .error-message {
+        background: #fff3ed;
+        color: #ff4d26;
+        border-radius: 12px;
+        padding: 12px 16px;
+        margin-bottom: 16px;
+        font-weight: 700;
+    }
 
     .table-header {
         display: grid;
@@ -906,10 +1131,58 @@
             cursor: not-allowed;
         }
 
-    .lead-action-buttons {
-        display: grid;
-        gap: 8px;
+    .resend-btn {
+        background: #f5f5f5;
+        color: #444;
+        border: 1px solid #e5e5e5;
+        padding: 12px 18px;
+        border-radius: 10px;
+        font-weight: 600;
+        width: fit-content;
+        height: fit-content;
+        justify-self: start;
+        cursor: pointer;
     }
+
+        .resend-btn:hover:not(:disabled) {
+            background: #ececec;
+        }
+
+        .resend-btn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
+    .lead-action-buttons {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        justify-self: start;
+    }
+
+    .delete-btn {
+        width: 36px;
+        height: 36px;
+        background: transparent;
+        color: #dc2626;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+    }
+
+        .delete-btn:hover:not(:disabled) {
+            background: #fef2f2;
+        }
+
+        .delete-btn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
 
     .card-icon {
         width: 42px;
@@ -928,23 +1201,16 @@
         width: fit-content;
     }
 
-    .lead-progress-bar {
-        width: 120px;
-        height: 7px;
-        background: #f1f1f1;
-        border-radius: 50px;
-        overflow: hidden;
-    }
-
-    .lead-progress-fill {
-        height: 100%;
-        background: #ff4d26;
-    }
-
     .lead-progress small {
         color: #777;
         font-size: 11px;
         font-weight: 700;
+    }
+
+    .lead-created {
+        font-size: 12px;
+        color: #777;
+        font-weight: 600;
     }
 
     .lead-actions {
@@ -981,6 +1247,25 @@
         display: flex;
         flex-direction: column;
     }
+
+    .confirm-modal {
+        width: 100%;
+        max-width: 460px;
+        background: white;
+        border-radius: 24px;
+        overflow: hidden;
+        box-shadow: 0 24px 70px rgba(0, 0, 0, 0.18);
+        display: flex;
+        flex-direction: column;
+    }
+
+        .confirm-modal .assign-modal-header {
+            padding: 32px 32px 24px;
+        }
+
+            .confirm-modal .assign-modal-header p strong {
+                color: #171717;
+            }
 
     .assign-modal-header {
         padding: 32px 32px 20px;
@@ -1083,6 +1368,17 @@
         color: white;
     }
 
+    .assign-error {
+        padding: 0 32px 12px;
+        margin: 0;
+    }
+
+    .lead-error {
+        color: #ff4d26;
+        font-size: 13px;
+        font-weight: 700;
+    }
+
     .assign-modal-footer {
         padding: 24px 32px 32px;
         display: grid;
@@ -1099,6 +1395,11 @@
         cursor: pointer;
     }
 
+        .assign-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
     .assign-btn-light {
         background: white;
         color: #222;
@@ -1109,4 +1410,13 @@
         background: #171717;
         color: white;
     }
+
+    .assign-btn-danger {
+        background: #dc2626;
+        color: white;
+    }
+
+        .assign-btn-danger:hover:not(:disabled) {
+            background: #b91c1c;
+        }
 </style>

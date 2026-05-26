@@ -11,6 +11,12 @@ import {
   updateModule,
   deleteModule,
   assignCourse,
+  createLead,
+  getCustomerCourses,
+  unassignCourse,
+  resendCourses,
+  getCourseCustomers,
+  deleteCustomer,
 } from "../controllers/admin.controller";
 
 const router: Router = Router();
@@ -98,6 +104,129 @@ router.get("/customers", getCustomers);
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.get("/customers/:id", getCustomerById);
+
+/**
+ * @swagger
+ * /admin/customers/{id}:
+ *   delete:
+ *     summary: Delete a customer/lead and all related data
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Customer deleted
+ *       404:
+ *         description: Customer not found
+ */
+router.delete("/customers/:id", deleteCustomer);
+
+/**
+ * @swagger
+ * /admin/leads:
+ *   post:
+ *     summary: Create a lead user (pending_survey)
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *     responses:
+ *       201:
+ *         description: Lead created
+ *       400:
+ *         description: Missing or invalid email
+ *       409:
+ *         description: Email already registered
+ */
+router.post("/leads", createLead);
+
+/**
+ * @swagger
+ * /admin/customers/{id}/courses:
+ *   get:
+ *     summary: List a customer's assigned courses
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: List of assignments
+ *       404:
+ *         description: Customer not found
+ */
+router.get("/customers/:id/courses", getCustomerCourses);
+
+/**
+ * @swagger
+ * /admin/customers/{id}/courses/{courseId}:
+ *   delete:
+ *     summary: Remove a course assignment from a customer
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: courseId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Assignment removed
+ *       404:
+ *         description: Assignment not found
+ */
+router.delete("/customers/:id/courses/:courseId", unassignCourse);
+
+/**
+ * @swagger
+ * /admin/customers/{id}/resend-courses:
+ *   post:
+ *     summary: Resend course assignment email to customer
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Email resent
+ *       400:
+ *         description: Customer has no assigned courses
+ *       404:
+ *         description: Customer not found
+ */
+router.post("/customers/:id/resend-courses", resendCourses);
 
 /**
  * @swagger
@@ -263,6 +392,28 @@ router.post("/courses", createCourse);
  */
 router.put("/courses/:id", updateCourse);
 router.delete("/courses/:id", deleteCourse);
+
+/**
+ * @swagger
+ * /admin/courses/{id}/customers:
+ *   get:
+ *     summary: List customers assigned to a specific course
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Customers assigned to course
+ *       404:
+ *         description: Course not found
+ */
+router.get("/courses/:id/customers", getCourseCustomers);
 
 /**
  * @swagger

@@ -119,6 +119,11 @@
                 </div>
             </div>
 
+            <p v-if="submitError"
+               class="lead-error">
+                {{ submitError }}
+            </p>
+
             <footer class="create-lead-footer">
                 <button class="create-lead-btn create-lead-btn-light"
                         type="button"
@@ -128,9 +133,9 @@
 
                 <button class="create-lead-btn create-lead-btn-primary"
                         type="button"
-                        :disabled="selectedLeadCount === 0"
+                        :disabled="selectedLeadCount === 0 || isSubmitting"
                         @click="sendSurveyToLeads">
-                    Send survey til leads
+                    {{ isSubmitting ? "Sender..." : "Send survey til leads" }}
                 </button>
             </footer>
         </div>
@@ -140,11 +145,15 @@
 <script setup>
     import { computed, ref } from "vue";
 
+    const API_URL = import.meta.env.VITE_API_URL;
+
     const emit = defineEmits(["close", "created"]);
 
     const manualEmail = ref("");
     const manualError = ref("");
     const uploadError = ref("");
+    const submitError = ref("");
+    const isSubmitting = ref(false);
 
     const pendingLeads = ref([]);
 
@@ -262,32 +271,59 @@
         );
     }
 
-    function sendSurveyToLeads() {
-        const selectedLeads = pendingLeads.value
-            .filter((lead) => lead.selected)
-            .map((lead) => {
-                return {
-                    id: makeId(),
-                    email: lead.email,
-
-                    // De her felter kommer først rigtigt senere,
-                    // når leadet har svaret på survey.
-                    name: "",
-                    company: "",
-
-                    status: "Survey sendt",
-                    statusClass: "waiting",
-                    surveyProgress: 35,
-                    action: "Simuler svar",
-                    surveySent: true,
-                    hasSurveyAnswers: false,
-                };
-            });
+    async function sendSurveyToLeads() {
+        const selectedLeads = pendingLeads.value.filter((lead) => lead.selected);
 
         if (selectedLeads.length === 0) return;
 
-        emit("created", selectedLeads);
-        emit("close");
+        isSubmitting.value = true;
+        submitError.value = "";
+
+        // Opretter en lead-user pr. email i MongoDB med status pending_survey.
+        // Fejler oprettelser for individuelle emails (fx 409 = duplikat)
+        // markeres så admin kan se hvilke der ikke kom igennem.
+        const results = await Promise.allSettled(
+            selectedLeads.map(async (lead) => {
+                const res = await fetch(`${API_URL}/admin/leads`, {
+                    method: "POST",
+                    credentials: "include",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ email: lead.email }),
+                });
+
+                const body = await res.json().catch(() => ({}));
+
+                if (!res.ok) {
+                    throw new Error(
+                        body.message || `Kunne ikke oprette ${lead.email}.`,
+                    );
+                }
+
+                return body.user;
+            }),
+        );
+
+        const created = results
+            .filter((r) => r.status === "fulfilled" && r.value)
+            .map((r) => r.value);
+
+        const failed = results
+            .map((r, i) => ({ result: r, lead: selectedLeads[i] }))
+            .filter(({ result }) => result.status === "rejected");
+
+        isSubmitting.value = false;
+
+        if (failed.length > 0) {
+            submitError.value = `${failed.length} af ${selectedLeads.length} kunne ikke oprettes (fx duplikater).`;
+        }
+
+        if (created.length > 0) {
+            emit("created", created);
+        }
+
+        if (failed.length === 0) {
+            emit("close");
+        }
     }
 
     function closeModal() {
