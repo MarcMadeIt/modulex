@@ -119,24 +119,23 @@
                 </div>
             </div>
 
-            <footer class="create-lead-footer">
-                <p v-if="sendError"
-                   class="lead-error footer-error">
-                    {{ sendError }}
-                </p>
+            <p v-if="submitError"
+               class="lead-error">
+                {{ submitError }}
+            </p>
 
+            <footer class="create-lead-footer">
                 <button class="create-lead-btn create-lead-btn-light"
                         type="button"
-                        :disabled="sending"
                         @click="closeModal">
                     Annuller
                 </button>
 
                 <button class="create-lead-btn create-lead-btn-primary"
                         type="button"
-                        :disabled="selectedLeadCount === 0 || sending"
+                        :disabled="selectedLeadCount === 0 || isSubmitting"
                         @click="sendSurveyToLeads">
-                    {{ sending ? "Sender..." : "Send survey til leads" }}
+                    {{ isSubmitting ? "Sender..." : "Send survey til leads" }}
                 </button>
             </footer>
         </div>
@@ -146,16 +145,15 @@
 <script setup>
     import { computed, ref } from "vue";
 
-    const emit = defineEmits(["close", "created"]);
-
     const API_URL = import.meta.env.VITE_API_URL;
+
+    const emit = defineEmits(["close", "created"]);
 
     const manualEmail = ref("");
     const manualError = ref("");
     const uploadError = ref("");
-
-    const sending = ref(false);
-    const sendError = ref("");
+    const submitError = ref("");
+    const isSubmitting = ref(false);
 
     const pendingLeads = ref([]);
 
@@ -274,46 +272,57 @@
     }
 
     async function sendSurveyToLeads() {
-        const emails = pendingLeads.value
-            .filter((lead) => lead.selected)
-            .map((lead) => lead.email);
+        const selectedLeads = pendingLeads.value.filter((lead) => lead.selected);
 
-        if (emails.length === 0) return;
+        if (selectedLeads.length === 0) return;
 
-        sending.value = true;
-        sendError.value = "";
+        isSubmitting.value = true;
+        submitError.value = "";
 
-        try {
-            const res = await fetch(`${API_URL}/admin/send-survey`, {
-                method: "POST",
-                credentials: "include",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ emails }),
-            });
+        // Opretter en lead-user pr. email i MongoDB med status pending_survey.
+        // Fejler oprettelser for individuelle emails (fx 409 = duplikat)
+        // markeres så admin kan se hvilke der ikke kom igennem.
+        const results = await Promise.allSettled(
+            selectedLeads.map(async (lead) => {
+                const res = await fetch(`${API_URL}/admin/leads`, {
+                    method: "POST",
+                    credentials: "include",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ email: lead.email }),
+                });
 
-            const data = await res.json().catch(() => ({}));
+                const body = await res.json().catch(() => ({}));
 
-            if (!res.ok) {
-                throw new Error(data.message || `HTTP ${res.status}`);
-            }
+                if (!res.ok) {
+                    throw new Error(
+                        body.message || `Kunne ikke oprette ${lead.email}.`,
+                    );
+                }
 
-            // Delvis fejl: nogle mails kunne ikke sendes -> vis besked, hold modal åben.
-            if (Array.isArray(data.failed) && data.failed.length > 0) {
-                sendError.value =
-                    `Kunne ikke sende til: ${data.failed.join(", ")}.` +
-                    (data.sent ? ` Sendt til ${data.sent}.` : "");
-                emit("created"); // leads er gemt -> opdatér dashboardet
-                return;
-            }
+                return body.user;
+            }),
+        );
 
-            // Parent genhenter leads fra databasen efter afsendelse.
-            emit("created");
+        const created = results
+            .filter((r) => r.status === "fulfilled" && r.value)
+            .map((r) => r.value);
+
+        const failed = results
+            .map((r, i) => ({ result: r, lead: selectedLeads[i] }))
+            .filter(({ result }) => result.status === "rejected");
+
+        isSubmitting.value = false;
+
+        if (failed.length > 0) {
+            submitError.value = `${failed.length} af ${selectedLeads.length} kunne ikke oprettes (fx duplikater).`;
+        }
+
+        if (created.length > 0) {
+            emit("created", created);
+        }
+
+        if (failed.length === 0) {
             emit("close");
-        } catch (err) {
-            sendError.value =
-                err.message || "Kunne ikke sende spørgeskemaet. Prøv igen.";
-        } finally {
-            sending.value = false;
         }
     }
 
@@ -549,11 +558,6 @@
         grid-template-columns: 1fr 1.3fr;
         gap: 16px;
         background: #fafafa;
-    }
-
-    .footer-error {
-        grid-column: 1 / -1;
-        margin: 0 0 4px;
     }
 
     .create-lead-btn {

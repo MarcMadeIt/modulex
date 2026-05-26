@@ -4,45 +4,49 @@ import { SurveyResponse, IAnswer } from "../models/SurveyResponse";
 
 export const submitSurvey = async (req: Request, res: Response) => {
   try {
-    const { companyName, contactPerson, phone, answers } = req.body;
-    const email = String(req.body.email ?? "").trim().toLowerCase();
+    const { email, companyName, contactPerson, phone, answers } = req.body;
 
-    if (!email) {
-      return res.status(400).json({ error: { message: "Email is required" } });
-    }
-
-    if (!companyName || !contactPerson || !phone) {
+    if (!email || typeof email !== "string") {
       return res
         .status(400)
-        .json({ error: { message: "Missing required fields" } });
+        .json({ error: { message: "Email is required" } });
     }
 
-    const existing = await User.findOne({ email });
+    const cleanEmail = email.trim().toLowerCase();
+    const existing = await User.findOne({ email: cleanEmail });
 
-    // Allerede registreret (har udfyldt survey før / er aktiv) -> afvis.
-    // En forhåndsoprettet lead (pending_survey) må derimod gerne udfylde nu.
-    if (existing && existing.status !== "pending_survey") {
+    // Hvis kunden allerede er aktiveret (har valgt password) skal de ikke
+    // kunne overskrive deres profil via survey-formularen.
+    if (
+      existing &&
+      existing.status !== "pending_survey" &&
+      existing.status !== "pending_approval"
+    ) {
       return res.status(409).json({
         error: { message: "Email is already registered" },
       });
     }
 
-    let user;
-    if (existing) {
-      // Lead udfylder spørgeskemaet -> ryk fra "Igangværende" til "Klar til kursus".
-      existing.companyName = companyName;
-      existing.contactPerson = contactPerson;
-      existing.phone = phone;
-      existing.status = "pending_approval";
-      user = await existing.save();
-    } else {
-      user = await User.create({
-        email,
+    // Lead-flow: admin har sendt survey-mail -> bruger findes med pending_survey.
+    // Vi opdaterer det eksisterende record i stedet for at oprette en duplikat.
+    // pending_approval = bruger besvarer surveyen igen før admin har tildelt
+    // kurser -> tillad opdatering så de kan rette deres svar.
+    const user =
+      existing ??
+      (await User.create({
+        email: cleanEmail,
         companyName,
         contactPerson,
         phone,
         status: "pending_approval",
-      });
+      }));
+
+    if (existing) {
+      user.companyName = companyName ?? user.companyName;
+      user.contactPerson = contactPerson ?? user.contactPerson;
+      user.phone = phone ?? user.phone;
+      user.status = "pending_approval";
+      await user.save();
     }
 
     // Convert answers map to array format expected by the schema.
@@ -54,14 +58,24 @@ export const submitSurvey = async (req: Request, res: Response) => {
     );
 
     try {
-      // Upsert så en lead kan gen-indsende uden at ramme unikt userId-index.
+      // Upsert: hvis brugeren genindsender surveyen erstattes svarene.
       await SurveyResponse.findOneAndUpdate(
         { userId: user._id },
-        { userEmail: user.email, answers: answerList },
-        { upsert: true, setDefaultsOnInsert: true, new: true },
+        {
+          $set: {
+            userEmail: user.email,
+            answers: answerList,
+          },
+        },
+        {
+          upsert: true,
+          returnDocument: "after",
+          setDefaultsOnInsert: true,
+        },
       );
     } catch (err) {
-      // Kun ryd op hvis vi lige har oprettet brugeren her.
+      // Hvis brugeren ikke fandtes i forvejen og survey-write fejler,
+      // ryd det halve user-record op igen så vi ikke efterlader skrald.
       if (!existing) {
         await User.deleteOne({ _id: user._id });
       }

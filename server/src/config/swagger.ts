@@ -323,7 +323,7 @@ const options: swaggerJsdoc.Options = {
           type: "object",
           properties: {
             _id: { type: "string", example: "664f1c2e8b1a2c3d4e5f6a7b" },
-            email: { type: "string", example: "user@test.com" },
+            email: { type: "string", example: "user@example.com" },
             companyName: { type: "string", example: "Acme Corp" },
             contactPerson: { type: "string", example: "Jane Doe" },
             phone: { type: "string", example: "+45 12 34 56 78" },
@@ -346,7 +346,7 @@ const options: swaggerJsdoc.Options = {
             email: {
               type: "string",
               format: "email",
-              example: "user@test.com",
+              example: "user@example.com",
             },
             password: { type: "string", minLength: 6, example: "test1234!" },
           },
@@ -358,7 +358,7 @@ const options: swaggerJsdoc.Options = {
             email: {
               type: "string",
               format: "email",
-              example: "user@test.com",
+              example: "user@example.com",
             },
             password: { type: "string", example: "test1234!" },
           },

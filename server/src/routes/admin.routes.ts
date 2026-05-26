@@ -3,17 +3,20 @@ import { authRequired, adminOnly } from "../middleware/auth.middleware";
 import {
   getCustomers,
   getCustomerById,
-  activateCustomer,
   getAdminCourses,
   createCourse,
   updateCourse,
   deleteCourse,
-  getAdminModules,
   createModule,
   updateModule,
   deleteModule,
   assignCourse,
-  sendSurvey,
+  createLead,
+  getCustomerCourses,
+  unassignCourse,
+  resendCourses,
+  getCourseCustomers,
+  deleteCustomer,
 } from "../controllers/admin.controller";
 
 const router: Router = Router();
@@ -104,9 +107,9 @@ router.get("/customers/:id", getCustomerById);
 
 /**
  * @swagger
- * /admin/customers/{id}/activate:
- *   patch:
- *     summary: Activate a customer and send the registration (set-password) email
+ * /admin/customers/{id}:
+ *   delete:
+ *     summary: Delete a customer/lead and all related data
  *     tags: [Admin]
  *     security:
  *       - bearerAuth: []
@@ -116,30 +119,114 @@ router.get("/customers/:id", getCustomerById);
  *         required: true
  *         schema:
  *           type: string
- *         description: The MongoDB ObjectId of the customer
- *         example: 664f1c2e8b1a2c3d4e5f6a7b
  *     responses:
  *       200:
- *         description: Customer moved to pending_activation and email sent
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 user:
- *                   $ref: '#/components/schemas/CustomerResponse'
- *       401:
- *         description: Not authenticated
- *       403:
- *         description: Forbidden - admin role required
+ *         description: Customer deleted
  *       404:
  *         description: Customer not found
- *       409:
- *         description: Customer cannot be activated in its current status
- *       502:
- *         description: Registration email could not be sent
  */
-router.patch("/customers/:id/activate", activateCustomer);
+router.delete("/customers/:id", deleteCustomer);
+
+/**
+ * @swagger
+ * /admin/leads:
+ *   post:
+ *     summary: Create a lead user (pending_survey)
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *     responses:
+ *       201:
+ *         description: Lead created
+ *       400:
+ *         description: Missing or invalid email
+ *       409:
+ *         description: Email already registered
+ */
+router.post("/leads", createLead);
+
+/**
+ * @swagger
+ * /admin/customers/{id}/courses:
+ *   get:
+ *     summary: List a customer's assigned courses
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: List of assignments
+ *       404:
+ *         description: Customer not found
+ */
+router.get("/customers/:id/courses", getCustomerCourses);
+
+/**
+ * @swagger
+ * /admin/customers/{id}/courses/{courseId}:
+ *   delete:
+ *     summary: Remove a course assignment from a customer
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: courseId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Assignment removed
+ *       404:
+ *         description: Assignment not found
+ */
+router.delete("/customers/:id/courses/:courseId", unassignCourse);
+
+/**
+ * @swagger
+ * /admin/customers/{id}/resend-courses:
+ *   post:
+ *     summary: Resend course assignment email to customer
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Email resent
+ *       400:
+ *         description: Customer has no assigned courses
+ *       404:
+ *         description: Customer not found
+ */
+router.post("/customers/:id/resend-courses", resendCourses);
 
 /**
  * @swagger
@@ -308,9 +395,9 @@ router.delete("/courses/:id", deleteCourse);
 
 /**
  * @swagger
- * /admin/courses/{id}/modules:
+ * /admin/courses/{id}/customers:
  *   get:
- *     summary: Get all modules for a course
+ *     summary: List customers assigned to a specific course
  *     tags: [Admin]
  *     security:
  *       - bearerAuth: []
@@ -320,38 +407,17 @@ router.delete("/courses/:id", deleteCourse);
  *         required: true
  *         schema:
  *           type: string
- *         description: Course ID
- *         example: 664f1c2e8b1a2c3d4e5f6a7b
  *     responses:
  *       200:
- *         description: List of modules sorted by order
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 modules:
- *                   type: array
- *                   items:
- *                     $ref: '#/components/schemas/ModuleDetail'
- *       401:
- *         description: Not authenticated
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- *       403:
- *         description: Forbidden - admin role required
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
+ *         description: Customers assigned to course
  *       404:
  *         description: Course not found
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
+ */
+router.get("/courses/:id/customers", getCourseCustomers);
+
+/**
+ * @swagger
+ * /admin/courses/{id}/modules:
  *   post:
  *     summary: Add a module to a course
  *     tags: [Admin]
@@ -406,7 +472,6 @@ router.delete("/courses/:id", deleteCourse);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.get("/courses/:id/modules", getAdminModules);
 router.post("/courses/:id/modules", createModule);
 
 /**
@@ -571,54 +636,5 @@ router.delete("/courses/:id/modules/:moduleId", deleteModule);
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.post("/assign-course", assignCourse);
-
-/**
- * @swagger
- * /admin/send-survey:
- *   post:
- *     summary: Send the survey email to one or more leads and save them as pending_survey users
- *     tags: [Admin]
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required: [emails]
- *             properties:
- *               emails:
- *                 type: array
- *                 items:
- *                   type: string
- *                   format: email
- *                 example: ["kunde@firma.dk", "anden@firma.dk"]
- *     responses:
- *       200:
- *         description: Result of the send operation
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 sent:
- *                   type: integer
- *                 failed:
- *                   type: array
- *                   items:
- *                     type: string
- *       400:
- *         description: Missing or invalid emails
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- *       401:
- *         description: Not authenticated
- *       403:
- *         description: Forbidden - admin role required
- */
-router.post("/send-survey", sendSurvey);
 
 export default router;

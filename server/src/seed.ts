@@ -19,7 +19,7 @@ async function seed() {
       role: "admin",
       status: "active",
     },
-    { upsert: true, new: true },
+    { upsert: true, returnDocument: "after" },
   );
 
   console.log("Seeded: admin@test.dk / test1234!");

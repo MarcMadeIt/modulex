@@ -37,14 +37,24 @@
                            placeholder="Søg i modtagere..." />
                 </div>
 
-                <div v-if="filteredAssignedPartners.length > 0"
+                <div v-if="isLoading"
+                     class="empty-state">
+                    Henter modtagere...
+                </div>
+
+                <div v-else-if="loadError"
+                     class="empty-state">
+                    {{ loadError }}
+                </div>
+
+                <div v-else-if="filteredAssignedPartners.length > 0"
                      class="receiver-list">
                     <div v-for="partner in filteredAssignedPartners"
-                         :key="partner.id"
+                         :key="partner._id"
                          class="receiver-card">
                         <div>
-                            <strong>{{ partner.name }}</strong>
-                            <p>{{ partner.company }}</p>
+                            <strong>{{ partner.contactPerson || partner.email }}</strong>
+                            <p v-if="partner.companyName">{{ partner.companyName }}</p>
                             <small>{{ partner.email }}</small>
                         </div>
 
@@ -81,9 +91,7 @@
 </template>
 
 <script setup>
-import { computed, ref } from "vue";
-
-import { dummyPartners } from "../../data/dummyData.js";
+import { computed, onMounted, ref } from "vue";
 
 const props = defineProps({
   course: {
@@ -94,21 +102,17 @@ const props = defineProps({
 
 const emit = defineEmits(["close"]);
 
+const API_URL = import.meta.env.VITE_API_URL;
 const ASSIGNMENTS_KEY = "modulex_course_assignments";
-const PARTNERS_KEY = "modulex_dummy_partners";
 
 const searchQuery = ref("");
+const isLoading = ref(true);
+const loadError = ref("");
 
-const partners = ref(getPartners());
-const assignments = ref(getAssignments());
-
-const assignedPartners = computed(() => {
-  return partners.value.filter((partner) => {
-    const assignedCourseIds = assignments.value[partner.id] || [];
-
-    return assignedCourseIds.includes(props.course.id);
-  });
-});
+// Modtagere af det viste kursus hentes nu fra MongoDB.
+// For ikke-MongoDB kurser (dummy courses oprettet via AdminCreateCourseForm,
+// som stadig bruger localStorage) falder vi tilbage til localStorage-mappingen.
+const assignedPartners = ref([]);
 
 const filteredAssignedPartners = computed(() => {
   const search = searchQuery.value.toLowerCase().trim();
@@ -118,10 +122,14 @@ const filteredAssignedPartners = computed(() => {
   }
 
   return assignedPartners.value.filter((partner) => {
+    const contactPerson = (partner.contactPerson || "").toLowerCase();
+    const companyName = (partner.companyName || "").toLowerCase();
+    const email = (partner.email || "").toLowerCase();
+
     return (
-      partner.name.toLowerCase().includes(search) ||
-      partner.company.toLowerCase().includes(search) ||
-      partner.email.toLowerCase().includes(search)
+      contactPerson.includes(search) ||
+      companyName.includes(search) ||
+      email.includes(search)
     );
   });
 });
@@ -132,29 +140,82 @@ const completedCount = computed(() => {
   }).length;
 });
 
-function getPartners() {
-  const savedPartners = localStorage.getItem(PARTNERS_KEY);
-
-  if (savedPartners) {
-    return JSON.parse(savedPartners);
-  }
-
-  return dummyPartners;
+function isObjectIdLike(value) {
+  return typeof value === "string" && /^[a-f0-9]{24}$/i.test(value);
 }
 
-function getAssignments() {
-  const savedAssignments = localStorage.getItem(ASSIGNMENTS_KEY);
-
-  if (savedAssignments) {
-    return JSON.parse(savedAssignments);
-  }
-
+function getLocalAssignments() {
+  const saved = localStorage.getItem(ASSIGNMENTS_KEY);
+  if (saved) return JSON.parse(saved);
   return {};
 }
 
-function getPartnerProgress(partner) {
-  const lastNumber = Number(partner.id.slice(-1));
+async function loadAssignedFromServer(courseId) {
+  const res = await fetch(
+    `${API_URL}/admin/courses/${courseId}/customers`,
+    { credentials: "include" },
+  );
 
+  if (!res.ok) throw new Error("Kunne ikke hente modtagere.");
+
+  const data = await res.json();
+  return Array.isArray(data.customers) ? data.customers : [];
+}
+
+async function loadAssignedFromLocalStorage(courseId) {
+  // Fallback for kurser som endnu ikke ligger i MongoDB.
+  // Vi henter kunder fra serveren og krydshenviser med
+  // localStorage-mappingen partnerId -> [courseIds].
+  const res = await fetch(`${API_URL}/admin/customers`, {
+    credentials: "include",
+  });
+
+  if (!res.ok) return [];
+
+  const data = await res.json();
+  const allCustomers = Array.isArray(data.users) ? data.users : [];
+  const localMapping = getLocalAssignments();
+
+  return allCustomers.filter((customer) => {
+    const ids = localMapping[customer._id] || [];
+    return ids.includes(courseId);
+  });
+}
+
+async function loadAssigned() {
+  isLoading.value = true;
+  loadError.value = "";
+
+  const courseId = props.course?._id || props.course?.id;
+
+  try {
+    if (isObjectIdLike(courseId)) {
+      try {
+        assignedPartners.value = await loadAssignedFromServer(courseId);
+      } catch {
+        assignedPartners.value = await loadAssignedFromLocalStorage(courseId);
+      }
+    } else {
+      assignedPartners.value = await loadAssignedFromLocalStorage(courseId);
+    }
+  } catch (err) {
+    loadError.value = err.message || "Kunne ikke hente modtagere.";
+    assignedPartners.value = [];
+  } finally {
+    isLoading.value = false;
+  }
+}
+
+onMounted(loadAssigned);
+
+function getPartnerProgress(partner) {
+  // Indtil UserProgress-data eksponeres pr. (user, course) er det
+  // bare en placeholder beregnet ud fra _id, præcis som før.
+  const id = String(partner._id || "");
+  if (!id) return 0;
+  const lastNumber = Number(id.slice(-1));
+
+  if (Number.isNaN(lastNumber)) return 25;
   if (lastNumber % 3 === 0) return 100;
   if (lastNumber % 2 === 0) return 90;
 

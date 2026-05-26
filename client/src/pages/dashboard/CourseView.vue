@@ -1,6 +1,6 @@
 <template>
   <div class="course-view">
-    <!-- Header -->
+    
     <div class="course-header">
       <button @click="exitCourse" class="btn btn-light">
         <ArrowLeft :size="18" />
@@ -13,12 +13,10 @@
       </div>
     </div>
 
-    <!-- Loading -->
     <div v-if="loading" class="spinner-wrapper">
       <div class="spinner"></div>
     </div>
 
-    <!-- Course content -->
     <div v-else-if="currentStep" class="course-card">
       <div class="course-progress">
         <div
@@ -29,13 +27,14 @@
       </div>
 
       <div class="course-content">
-        <div class="step-header">
+        <div class="step-header">          
           <div class="step-type">
             <BookOpen :size="18" />
             <span>Modul {{ currentIndex + 1 }}</span>
           </div>
 
           <h2>{{ currentStep.title }}</h2>
+
           <div v-if="currentStep.duration" class="step-duration">
             ⏱ {{ formatDuration(currentStep.duration) }}
           </div>
@@ -118,7 +117,7 @@
           <span>Jeg bekræfter at have set indholdet</span>
         </label>
 
-        <div class="course-nav">
+        <div class="course-nav">          
           <button
             class="course-nav-back"
             @click="prevStep"
@@ -142,7 +141,6 @@
       </div>
     </div>
 
-    <!-- Completed / fallback -->
     <div v-else class="course-card">
       <div class="course-content">
         <h2>Kursus færdigt 🎉</h2>
@@ -169,6 +167,9 @@ import {
   ArrowRight,
   BookOpen,
 } from "lucide-vue-next";
+
+
+import { PlayCircle, FileText, ArrowLeft, ArrowRight } from "lucide-vue-next";
 
 const route = useRoute();
 const router = useRouter();
@@ -251,6 +252,8 @@ async function loadCourse() {
       }),
     );
 
+  // console.log er fjernet.
+  if (!foundCourse) {
     course.value = {
       id: apiCourse._id || apiCourse.id,
       title: apiCourse.title,

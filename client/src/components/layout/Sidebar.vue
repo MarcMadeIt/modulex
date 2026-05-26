@@ -26,16 +26,32 @@
 </template>
 
 <script setup>
+import { computed } from "vue";
 import { useRouter } from "vue-router";
 import { auth } from "../../stores/auth";
+
 const router = useRouter();
-const navItems = [
-    { label: 'Dashboard', path: '/dashboard' },
-    { label: 'Kurser', path: '/courses' },
-    { label: 'Indstillinger', path: '/settings' }
-];
+
+// Adskiller admin- og client-navigation. Admin har sit eget /dashboard/admin
+// område med tilhørende sub-routes; client har /dashboard.
+const navItems = computed(() => {
+    if (auth.role === "admin") {
+        return [
+            { label: "Dashboard", path: "/dashboard/admin" },
+            { label: "Kurser", path: "/dashboard/admin/courses" },
+            { label: "Indstillinger", path: "/settings" },
+        ];
+    }
+
+    return [
+        { label: "Dashboard", path: "/dashboard" },
+        { label: "Kurser", path: "/dashboard/courses" },
+        { label: "Indstillinger", path: "/settings" },
+    ];
+});
+
 const handleLogout = async () => {
     await auth.logout();
-    router.push("/login"); 
+    router.push("/login");
 };
 </script>

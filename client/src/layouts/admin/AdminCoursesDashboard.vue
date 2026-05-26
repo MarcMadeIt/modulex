@@ -45,15 +45,15 @@
 
                         <div class="receiver-list">
                             <label v-for="partner in filteredPartnersForDropdown"
-                                   :key="partner.id"
+                                   :key="partner._id"
                                    class="receiver-option">
                                 <input v-model="selectedPartnerIds"
                                        type="checkbox"
-                                       :value="partner.id" />
+                                       :value="partner._id" />
 
                                 <div>
-                                    <strong>{{ partner.name }}</strong>
-                                    <p>{{ partner.company }}</p>
+                                    <strong>{{ partner.contactPerson || partner.email }}</strong>
+                                    <p v-if="partner.companyName">{{ partner.companyName }}</p>
                                     <small>{{ partner.email }}</small>
                                 </div>
                             </label>
@@ -61,6 +61,11 @@
                             <div v-if="filteredPartnersForDropdown.length === 0"
                                  class="receiver-empty">
                                 Ingen kunder matcher søgningen.
+                            </div>
+
+                            <div v-if="partnersError"
+                                 class="receiver-empty">
+                                {{ partnersError }}
                             </div>
                         </div>
                     </div>
@@ -183,13 +188,11 @@
 </template>
 
 <script setup>
-    import { computed, ref } from "vue";
+    import { computed, onMounted, ref } from "vue";
 
     import AdminCreateCourseForm from "./AdminCreateCourseForm.vue";
     import AdminEditCourseModal from "./AdminEditCourseModal.vue";
     import AdminCourseAssignmentsModal from "./AdminCourseAssignmentsModal.vue";
-
-    import { dummyPartners } from "../../data/dummyData.js";
 
     import {
         getCourses,
@@ -197,11 +200,31 @@
         getCourseForAdmin,
     } from "../../data/dummyCourseService.js";
 
+    const API_URL = import.meta.env.VITE_API_URL;
     const ASSIGNMENTS_KEY = "modulex_course_assignments";
-    const PARTNERS_KEY = "modulex_dummy_partners";
 
     const courses = ref(getCourses());
-    const partners = ref(getSavedPartners());
+    // Partners (kunder) hentes nu fra MongoDB via /admin/customers
+    // i stedet for dummyPartners/localStorage.
+    const partners = ref([]);
+    const partnersError = ref("");
+
+    async function loadPartners() {
+        try {
+            const res = await fetch(`${API_URL}/admin/customers`, {
+                credentials: "include",
+            });
+
+            if (!res.ok) throw new Error("Kunne ikke hente kunder.");
+
+            const data = await res.json();
+            partners.value = Array.isArray(data.users) ? data.users : [];
+        } catch (err) {
+            partnersError.value = err.message || "Kunne ikke hente kunder.";
+        }
+    }
+
+    onMounted(loadPartners);
 
     const searchQuery = ref("");
     const receiverSearch = ref("");
@@ -246,13 +269,13 @@
         }
 
         return partners.value.filter((partner) => {
-            const name = partner.name || "";
-            const company = partner.company || "";
+            const contactPerson = partner.contactPerson || "";
+            const companyName = partner.companyName || "";
             const email = partner.email || "";
 
             return (
-                name.toLowerCase().includes(search) ||
-                company.toLowerCase().includes(search) ||
+                contactPerson.toLowerCase().includes(search) ||
+                companyName.toLowerCase().includes(search) ||
                 email.toLowerCase().includes(search)
             );
         });
@@ -267,18 +290,6 @@
             selectedCourseIds.value.includes(course.id)
         );
     });
-
-    function getSavedPartners() {
-        const savedPartners = localStorage.getItem(PARTNERS_KEY);
-
-        if (savedPartners) {
-            return JSON.parse(savedPartners);
-        }
-
-        localStorage.setItem(PARTNERS_KEY, JSON.stringify(dummyPartners));
-
-        return [...dummyPartners];
-    }
 
     function getAssignments() {
         const savedAssignments = localStorage.getItem(ASSIGNMENTS_KEY);
