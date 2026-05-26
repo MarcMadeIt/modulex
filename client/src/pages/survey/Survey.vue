@@ -18,12 +18,12 @@
           <ProgressBar :percentage="100" />
 
           <!-- Header -->
-          <div class="survey-header">
-            <div class="survey-icon">📧</div>
+          <div :class="['survey-header', { 'success': contactSuccess }]">
+            <div class="survey-icon">{{ contactSuccess ? '✅' : '📧' }}</div>
             <div>
-              <h1 class="survey-title">Næste skridt</h1>
+              <h1 class="survey-title">{{ contactSuccess ? 'Tak — dine oplysninger er sendt' : 'Næste skridt' }}</h1>
               <p class="survey-description">
-                Udfyld dine kontaktoplysninger for at afslutte
+                {{ contactSuccess ? 'Vi har modtaget dine oplysninger og vender tilbage til dig snarest.' : 'Udfyld dine kontaktoplysninger for at afslutte' }}
               </p>
             </div>
           </div>
@@ -32,11 +32,7 @@
           <div class="contact-form-wrapper">
             <template v-if="contactSuccess">
               <div class="contact-confirmation">
-                <div class="confirmation-icon">✓</div>
-                <h3>Tak — dine oplysninger er sendt</h3>
-                <p>
-                  Vi har modtaget dine kontaktoplysninger og vender tilbage til dig snarest.
-                </p>
+                <div class="confirmation-icon" aria-hidden="true">✓</div>
               </div>
             </template>
 
@@ -381,33 +377,28 @@ async function handleContactSubmit() {
 }
 
 .contact-confirmation {
-  padding: var(--space-7);
+  padding: var(--space-8) 0;
   text-align: center;
 }
 
 .contact-confirmation .confirmation-icon {
-  width: 64px;
-  height: 64px;
-  margin: 0 auto var(--space-4);
+  width: 140px;
+  height: 140px;
+  margin: 0 auto;
   display: grid;
   place-items: center;
   border-radius: 50%;
   background: rgba(16, 185, 129, 0.12);
   color: var(--color-primary-green);
-  font-size: 2rem;
+  font-size: 4rem;
 }
 
-.contact-confirmation h3 {
-  margin-bottom: var(--space-3);
-  font-size: 1.8rem;
-  color: var(--color-text-primary);
+.survey-header.success .survey-icon {
+  background: rgba(16, 185, 129, 0.08);
 }
 
-.contact-confirmation p {
-  max-width: 620px;
-  margin: 0 auto;
-  color: var(--color-primary-medium);
-  font-size: 1rem;
+.survey-header.success .survey-title {
+  color: var(--color-primary-green);
 }
 
 .survey-completed {
