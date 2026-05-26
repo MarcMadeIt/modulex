@@ -62,7 +62,7 @@ import { ref } from "vue";
 import { useRouter } from "vue-router";
 import { auth } from "../stores/auth";
  
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
+const API_URL = import.meta.env.VITE_API_URL;
 const router = useRouter();
  
 const email = ref("");
