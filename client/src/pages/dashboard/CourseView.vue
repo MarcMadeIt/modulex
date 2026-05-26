@@ -28,7 +28,7 @@
       <div class="course-content">
         <div class="step-header">          
           <div class="step-type">
-            <PlayCircle v-if="currentStep.type === 'video'" :size="18" />
+            <PlayCircle v-if="currentStep.type === 'video' || currentStep.type === 'youtube'" :size="18" />
             <FileText v-else-if="currentStep.type === 'pdf'" :size="18" />
             <span>{{ currentStep.type }}</span>
           </div>
@@ -46,7 +46,7 @@
         </div>
 
         <div class="content-box">
-          <template v-if="currentStep.type === 'video' && currentStep.url">
+          <template v-if="(currentStep.type === 'video' || currentStep.type === 'youtube') && currentStep.url">
             <iframe
               class="course-video"
               :src="currentStep.url"
@@ -63,7 +63,7 @@
 
             <!-- ÆNDRING: PDF-link bruger først fileUrl og falder tilbage til url. -->
             <a
-              :href="currentStep.fileUrl || currentStep.url"
+              :href="currentStepPdfUrl"
               target="_blank"
               rel="noopener noreferrer"
               class="pdf-link"
@@ -144,6 +144,10 @@ const currentStep = computed(() => {
   return course.value?.items?.[currentIndex.value];
 });
 
+const currentStepPdfUrl = computed(() => {
+  return getBackendAssetUrl(currentStep.value?.fileUrl || currentStep.value?.url);
+});
+
 const isLastStep = computed(() => {
   return course.value
     ? currentIndex.value === course.value.items.length - 1
@@ -187,10 +191,10 @@ onMounted(() => {
     return {
       title: module.title,
       description: module.description,
-      type: material.type,
+      type: material.type === "youtube" ? "video" : material.type,
       url: material.url,
       fileUrl: material.fileUrl,
-      duration: material.duration,
+      duration: material.duration || material.expectedDuration,
     };
   });
 }),
@@ -231,6 +235,10 @@ function prevStep() {
 
 function exitCourse() {
   router.push("/dashboard");
+}
+
+function getBackendAssetUrl(url) {
+  return url || "";
 }
 </script>
 
