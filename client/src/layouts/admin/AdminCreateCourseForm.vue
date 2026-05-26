@@ -263,6 +263,12 @@ function buildPayload() {
         description: "",
         order: moduleIndex + 1,
         materials: module.materials.map((material) => {
+          // contentId sendes med når materialet kommer fra biblioteket.
+          // Backend bruger den til at hente title/url live fra Content
+          // ved read-time, så biblioteks-ændringer slår igennem på kurser.
+          const contentId =
+            material.source === "library" ? material.contentId : undefined;
+
           if (material.type === "video") {
             const url =
               material.source === "library"
@@ -274,6 +280,7 @@ function buildPayload() {
               title: material.title.trim(),
               url,
               expectedDuration,
+              contentId,
             };
           }
 
@@ -282,6 +289,7 @@ function buildPayload() {
             title: material.title.trim(),
             url: material.fileUrl,
             expectedDuration,
+            contentId,
           };
         }),
       };

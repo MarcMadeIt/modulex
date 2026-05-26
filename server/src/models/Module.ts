@@ -6,6 +6,10 @@ export interface IMaterial {
   url?: string;
   content?: string;
   expectedDuration?: number; // in minutes
+  // Reference til Content-dokumentet hvis materialet er valgt "fra biblioteket".
+  // Når CourseView læser modulet, opdaterer vi title/url ud fra Content,
+  // så ændringer i biblioteket automatisk slår igennem på alle kurser.
+  contentId?: Types.ObjectId;
 }
 
 export interface IModule extends Document {
@@ -23,6 +27,7 @@ const materialSchema = new Schema<IMaterial>(
     url: { type: String },
     content: { type: String },
     expectedDuration: { type: Number }, // in minutes
+    contentId: { type: Schema.Types.ObjectId, ref: "Content" },
   },
   { _id: false },
 );

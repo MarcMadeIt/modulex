@@ -7,11 +7,14 @@ import {
   createContentBulk,
   updateContent,
   deleteContent,
+  resyncModuleMaterials,
 } from "../controllers/content.controller";
 
 const router: Router = Router();
 
 router.use(authRequired, adminOnly);
+
+router.post("/resync-modules", resyncModuleMaterials);
 
 /**
  * @swagger

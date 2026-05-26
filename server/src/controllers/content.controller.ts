@@ -7,6 +7,7 @@ import {
   CONTENT_TYPES,
   CONTENT_CATEGORIES,
 } from "../models/Content";
+import { Module } from "../models/Module";
 
 const EDITABLE_FIELDS = [
   "type",
@@ -185,5 +186,66 @@ export const deleteContent = async (req: AuthRequest, res: Response) => {
     return res.status(200).json({ message: "Content deleted" });
   } catch {
     return res.status(500).json({ message: "Failed to delete content" });
+  }
+};
+
+// Backfill: sætter contentId på eksisterende modul-materialer ved at matche
+// material.title med Content.title. Bruges én gang efter at vi tog reference-
+// arkitekturen i brug — derefter holder create-flowet contentId på plads.
+// Efter backfill bliver title/url løst dynamisk fra Content ved read-time.
+export const resyncModuleMaterials = async (
+  req: AuthRequest,
+  res: Response,
+) => {
+  try {
+    const contents = await Content.find().lean();
+
+    let modulesUpdated = 0;
+
+    for (const content of contents) {
+      const materialType = content.type === "youtube" ? "youtube" : content.type;
+      const matchableTypes =
+        materialType === "youtube" ? ["youtube", "video"] : [materialType];
+
+      const result = await Module.updateMany(
+        {
+          materials: {
+            $elemMatch: {
+              title: content.title,
+              type: { $in: matchableTypes },
+              contentId: { $exists: false },
+            },
+          },
+        },
+        {
+          $set: {
+            "materials.$[mat].contentId": content._id,
+            "materials.$[mat].type": materialType,
+          },
+        },
+        {
+          arrayFilters: [
+            {
+              "mat.title": content.title,
+              "mat.type": { $in: matchableTypes },
+              "mat.contentId": { $exists: false },
+            },
+          ],
+        },
+      );
+
+      modulesUpdated += result.modifiedCount;
+    }
+
+    return res.status(200).json({
+      message: "contentId backfilled på eksisterende moduler",
+      modulesUpdated,
+      contentChecked: contents.length,
+    });
+  } catch (err) {
+    console.error("Backfill error:", err);
+    return res
+      .status(500)
+      .json({ message: "Kunne ikke backfille contentId" });
   }
 };

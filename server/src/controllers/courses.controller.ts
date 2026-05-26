@@ -3,12 +3,44 @@ import { Types } from "mongoose";
 import { AuthRequest } from "../middleware/auth.middleware";
 import { Course } from "../models/Course";
 import { Module } from "../models/Module";
+import { Content } from "../models/Content";
 import { UserCourse } from "../models/UserCourse";
 import { UserProgress } from "../models/UserProgress";
 
 const hasAccess = async (userId: string, courseId: string) => {
   return UserCourse.exists({ userId, courseId });
 };
+
+// Når et material har en contentId-reference, vil vi gerne læse title/url
+// fra Content i stedet for det snapshot der ligger i modulet. Det betyder
+// at en opdatering af Content (fx ny YouTube-URL) automatisk slår igennem
+// på alle kurser uden at vi skal re-oprette eller resynke moduler.
+async function resolveMaterials(materials: any[]): Promise<any[]> {
+  if (!Array.isArray(materials) || materials.length === 0) return materials || [];
+
+  const contentIds = materials
+    .map((mat) => mat?.contentId)
+    .filter((id) => id && Types.ObjectId.isValid(id));
+
+  if (contentIds.length === 0) return materials;
+
+  const contents = await Content.find({ _id: { $in: contentIds } }).lean();
+  const byId = new Map(contents.map((c: any) => [String(c._id), c]));
+
+  return materials.map((mat) => {
+    if (!mat?.contentId) return mat;
+    const content: any = byId.get(String(mat.contentId));
+    if (!content) return mat;
+
+    return {
+      ...mat,
+      title: content.title,
+      url: content.url,
+      // type bevares fra modulet; Content's "youtube" matcher allerede vores enum
+      type: content.type === "youtube" ? "youtube" : mat.type,
+    };
+  });
+}
 
 // Parser et duration-felt fra MongoDB. Accepterer både tal (12) og strenge
 // ("12", "12 min", "12 minutter") — sidstnævnte fordi nogle moduler er
@@ -168,13 +200,15 @@ export const getCourseModule = async (req: AuthRequest, res: Response) => {
       return res.status(403).json({ message: "Forbidden" });
     }
 
-    const mod = await Module.findOne({ _id: moduleId, courseId: id });
+    const mod = await Module.findOne({ _id: moduleId, courseId: id }).lean();
 
     if (!mod) {
       return res.status(404).json({ message: "Module not found" });
     }
 
-    return res.status(200).json({ module: mod });
+    const materials = await resolveMaterials((mod as any).materials || []);
+
+    return res.status(200).json({ module: { ...mod, materials } });
   } catch {
     return res.status(500).json({ message: "Failed to fetch module" });
   }

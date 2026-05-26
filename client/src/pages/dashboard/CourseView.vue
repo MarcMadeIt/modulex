@@ -54,9 +54,9 @@
           >
             <div class="material-header">
               <div class="material-type">
-                <PlayCircle v-if="material.type === 'video'" :size="18" />
+                <PlayCircle v-if="isVideoMaterial(material)" :size="18" />
                 <FileText v-else-if="material.type === 'pdf'" :size="18" />
-                <span>{{ material.type === "video" ? "Video" : "PDF" }}</span>
+                <span>{{ isVideoMaterial(material) ? "Video" : "PDF" }}</span>
               </div>
 
               <h3>{{ material.title }}</h3>
@@ -69,13 +69,15 @@
             <div
               class="content-box"
               :class="{
-                'content-box-pdf': material.type === 'pdf' && material.fileUrl,
+                'content-box-pdf': material.type === 'pdf' && (material.fileUrl || material.url),
               }"
             >
-              <template v-if="material.type === 'video' && material.url">
+              <template
+                v-if="isVideoMaterial(material) && getYoutubeEmbedUrl(material.url)"
+              >
                 <iframe
                   class="course-video"
-                  :src="material.url"
+                  :src="getYoutubeEmbedUrl(material.url)"
                   :title="material.title"
                   frameborder="0"
                   allowfullscreen
@@ -100,6 +102,15 @@
                 >
                   Åbn PDF i ny fane
                 </a>
+              </template>
+
+              <template v-else-if="isVideoMaterial(material) && material.url">
+                <div class="content-placeholder-icon">⚠</div>
+                <p>{{ material.title }}</p>
+                <small>
+                  Linket er ikke et gyldigt YouTube-video-link.<br>
+                  <a :href="material.url" target="_blank">Åbn link i ny fane</a>
+                </small>
               </template>
 
               <template v-else>
@@ -286,6 +297,35 @@ async function loadCourse() {
   } finally {
     loading.value = false;
   }
+}
+
+// Materialer kan have type "video" (legacy/dummy data) eller "youtube"
+// (fra MongoDB Content/Module-schemaet). Begge skal renderes som video.
+function isVideoMaterial(material) {
+  return material?.type === "video" || material?.type === "youtube";
+}
+
+// Konverterer alle gængse YouTube-URL-former til en /embed/{id}-URL.
+// Returnerer en tom streng for søge-URLs, kanal-links eller andet
+// der ikke kan embeddes — så CourseView kan vise et tydeligt fallback.
+function getYoutubeEmbedUrl(url) {
+  if (!url || typeof url !== "string") return "";
+
+  if (url.includes("/results")) return "";
+
+  if (url.includes("youtube.com/embed/")) return url;
+
+  let videoId = "";
+
+  if (url.includes("youtube.com/watch?v=")) {
+    videoId = url.split("v=")[1]?.split("&")[0] || "";
+  } else if (url.includes("youtu.be/")) {
+    videoId = url.split("youtu.be/")[1]?.split("?")[0] || "";
+  } else if (url.includes("youtube.com/shorts/")) {
+    videoId = url.split("shorts/")[1]?.split("?")[0] || "";
+  }
+
+  return videoId ? `https://www.youtube.com/embed/${videoId}` : "";
 }
 
 function mapModuleForFrontend(module) {

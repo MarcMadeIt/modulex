@@ -117,6 +117,7 @@ type IncomingMaterial = {
   url?: string;
   content?: string;
   expectedDuration?: number;
+  contentId?: string;
 };
 
 type IncomingModule = {
@@ -136,6 +137,11 @@ function normalizeMaterial(raw: IncomingMaterial) {
     return null;
   }
 
+  const contentId =
+    typeof raw.contentId === "string" && Types.ObjectId.isValid(raw.contentId)
+      ? new Types.ObjectId(raw.contentId)
+      : undefined;
+
   return {
     type,
     title: typeof raw.title === "string" ? raw.title.trim() : "",
@@ -145,6 +151,7 @@ function normalizeMaterial(raw: IncomingMaterial) {
       typeof raw.expectedDuration === "number" && Number.isFinite(raw.expectedDuration)
         ? raw.expectedDuration
         : undefined,
+    contentId,
   };
 }
 
