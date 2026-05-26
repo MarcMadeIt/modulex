@@ -247,16 +247,6 @@
 
     function closeCreateCourseForm() {
         showCreateCourseForm.value = false;
-
-        // Vigtigt:
-        // Når AdminCreateCourseForm opretter et kursus i localStorage,
-        // henter dashboardet kurserne igen her.
         refreshCourses();
-
-        /*
-          API SENERE:
-          Når I får backend/API, kan refreshCourses() stadig bruges,
-          men getCourses() inde i dummyCourseService.js skal ændres til fetch("/api/courses").
-        */
     }
 </script>

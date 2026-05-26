@@ -103,15 +103,12 @@ const props = defineProps({
 const emit = defineEmits(["close"]);
 
 const API_URL = import.meta.env.VITE_API_URL;
-const ASSIGNMENTS_KEY = "modulex_course_assignments";
 
 const searchQuery = ref("");
 const isLoading = ref(true);
 const loadError = ref("");
 
-// Modtagere af det viste kursus hentes nu fra MongoDB.
-// For ikke-MongoDB kurser (dummy courses oprettet via AdminCreateCourseForm,
-// som stadig bruger localStorage) falder vi tilbage til localStorage-mappingen.
+// Modtagere af det viste kursus hentes fra MongoDB.
 const assignedPartners = ref([]);
 
 const filteredAssignedPartners = computed(() => {
@@ -140,48 +137,6 @@ const completedCount = computed(() => {
   }).length;
 });
 
-function isObjectIdLike(value) {
-  return typeof value === "string" && /^[a-f0-9]{24}$/i.test(value);
-}
-
-function getLocalAssignments() {
-  const saved = localStorage.getItem(ASSIGNMENTS_KEY);
-  if (saved) return JSON.parse(saved);
-  return {};
-}
-
-async function loadAssignedFromServer(courseId) {
-  const res = await fetch(
-    `${API_URL}/admin/courses/${courseId}/customers`,
-    { credentials: "include" },
-  );
-
-  if (!res.ok) throw new Error("Kunne ikke hente modtagere.");
-
-  const data = await res.json();
-  return Array.isArray(data.customers) ? data.customers : [];
-}
-
-async function loadAssignedFromLocalStorage(courseId) {
-  // Fallback for kurser som endnu ikke ligger i MongoDB.
-  // Vi henter kunder fra serveren og krydshenviser med
-  // localStorage-mappingen partnerId -> [courseIds].
-  const res = await fetch(`${API_URL}/admin/customers`, {
-    credentials: "include",
-  });
-
-  if (!res.ok) return [];
-
-  const data = await res.json();
-  const allCustomers = Array.isArray(data.users) ? data.users : [];
-  const localMapping = getLocalAssignments();
-
-  return allCustomers.filter((customer) => {
-    const ids = localMapping[customer._id] || [];
-    return ids.includes(courseId);
-  });
-}
-
 async function loadAssigned() {
   isLoading.value = true;
   loadError.value = "";
@@ -189,15 +144,17 @@ async function loadAssigned() {
   const courseId = props.course?._id || props.course?.id;
 
   try {
-    if (isObjectIdLike(courseId)) {
-      try {
-        assignedPartners.value = await loadAssignedFromServer(courseId);
-      } catch {
-        assignedPartners.value = await loadAssignedFromLocalStorage(courseId);
-      }
-    } else {
-      assignedPartners.value = await loadAssignedFromLocalStorage(courseId);
-    }
+    const res = await fetch(
+      `${API_URL}/admin/courses/${courseId}/customers`,
+      { credentials: "include" },
+    );
+
+    if (!res.ok) throw new Error("Kunne ikke hente modtagere.");
+
+    const data = await res.json();
+    assignedPartners.value = Array.isArray(data.customers)
+      ? data.customers
+      : [];
   } catch (err) {
     loadError.value = err.message || "Kunne ikke hente modtagere.";
     assignedPartners.value = [];

@@ -75,7 +75,9 @@
 
     const emit = defineEmits(["close", "saved"]);
 
-    const ASSIGNMENTS_KEY = "modulex_course_assignments";
+    // In-memory assignment-map som erstatter den tidligere localStorage-cache.
+    // Seedes fra dummyCourseAssignments første gang modulet importeres.
+    const assignmentMap = { ...dummyCourseAssignments };
 
     const courses = ref(getCourses());
     const courseSearch = ref("");
@@ -97,25 +99,8 @@
         });
     });
 
-    function getAssignments() {
-        const savedAssignments = localStorage.getItem(ASSIGNMENTS_KEY);
-
-        if (savedAssignments) {
-            return JSON.parse(savedAssignments);
-        }
-
-        localStorage.setItem(
-            ASSIGNMENTS_KEY,
-            JSON.stringify(dummyCourseAssignments)
-        );
-
-        return dummyCourseAssignments;
-    }
-
     function getAssignedCourseIds(partnerId) {
-        const assignments = getAssignments();
-
-        return assignments[partnerId] || [];
+        return assignmentMap[partnerId] || [];
     }
 
     function toggleCourse(courseId) {
@@ -131,11 +116,7 @@
     }
 
     function saveAssignedCourses() {
-        const assignments = getAssignments();
-
-        assignments[props.partner.id] = selectedCourseIds.value;
-
-        localStorage.setItem(ASSIGNMENTS_KEY, JSON.stringify(assignments));
+        assignmentMap[props.partner.id] = selectedCourseIds.value;
 
         emit("saved");
         emit("close");

@@ -109,13 +109,90 @@ export const getCourseCustomers = async (req: AuthRequest, res: Response) => {
   }
 };
 
+const ALLOWED_MATERIAL_TYPES = ["youtube", "pdf", "text"] as const;
+
+type IncomingMaterial = {
+  type?: string;
+  title?: string;
+  url?: string;
+  content?: string;
+  expectedDuration?: number;
+};
+
+type IncomingModule = {
+  title?: string;
+  description?: string;
+  order?: number;
+  materials?: IncomingMaterial[];
+};
+
+// Mapper materials fra create-flowet til Module-schemaets enum.
+// Frontenden bruger "video" som UI-label, men schemaet kender kun "youtube".
+function normalizeMaterial(raw: IncomingMaterial) {
+  const rawType = (raw?.type || "").toLowerCase();
+  const type = rawType === "video" ? "youtube" : rawType;
+
+  if (!ALLOWED_MATERIAL_TYPES.includes(type as (typeof ALLOWED_MATERIAL_TYPES)[number])) {
+    return null;
+  }
+
+  return {
+    type,
+    title: typeof raw.title === "string" ? raw.title.trim() : "",
+    url: typeof raw.url === "string" ? raw.url.trim() : undefined,
+    content: typeof raw.content === "string" ? raw.content : undefined,
+    expectedDuration:
+      typeof raw.expectedDuration === "number" && Number.isFinite(raw.expectedDuration)
+        ? raw.expectedDuration
+        : undefined,
+  };
+}
+
 export const createCourse = async (req: AuthRequest, res: Response) => {
   try {
-    const { title, description } = req.body;
+    const { title, description, modules } = req.body as {
+      title?: string;
+      description?: string;
+      modules?: IncomingModule[];
+    };
+
     if (!title || !description) {
-      return res.status(400).json({ message: "Title and description are required" });
+      return res
+        .status(400)
+        .json({ message: "Title and description are required" });
     }
+
     const course = await Course.create({ title, description });
+
+    // Opretter moduler i samme request — atomisk nok til at vi kan rulle
+    // kurset tilbage hvis et modul fejler, så vi ikke efterlader et halvt
+    // oprettet kursus.
+    if (Array.isArray(modules) && modules.length > 0) {
+      try {
+        const docs = modules.map((mod, index) => {
+          const materials = Array.isArray(mod.materials)
+            ? mod.materials.map(normalizeMaterial).filter(Boolean)
+            : [];
+
+          return {
+            courseId: course._id,
+            title: typeof mod.title === "string" ? mod.title.trim() : "",
+            description:
+              typeof mod.description === "string" ? mod.description.trim() : "",
+            order: typeof mod.order === "number" ? mod.order : index + 1,
+            materials,
+          };
+        });
+
+        await Module.insertMany(docs, { ordered: true });
+      } catch (err) {
+        await Course.findByIdAndDelete(course._id);
+        return res
+          .status(400)
+          .json({ message: "Invalid module data — kurset blev ikke oprettet." });
+      }
+    }
+
     return res.status(201).json({ course });
   } catch {
     return res.status(500).json({ message: "Failed to create course" });
