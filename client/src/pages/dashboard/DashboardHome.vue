@@ -68,7 +68,7 @@
           v-for="course in filteredCourses"
           :key="course.id"
           class="course-card"
-          @click="openCourse(course.id)"
+          @click="openCourse(course)"
         >
           <!-- <div
             class="course-progress-top"
@@ -277,8 +277,11 @@ function getTotalDuration(modules) {
   }, 0);
 }
 
-function openCourse(id) {
-  router.push(`/dashboard/course/${id}`);
+function openCourse(course) {
+  router.push({
+    path: `/dashboard/course/${course.id}`,
+    query: course.completed ? { review: "true" } : {},
+  });
 }
 
 function goToFirstCourse() {
@@ -286,7 +289,7 @@ function goToFirstCourse() {
     courses.value.find((course) => !course.completed) || courses.value[0];
 
   if (firstActiveCourse) {
-    openCourse(firstActiveCourse.id);
+    openCourse(firstActiveCourse);
   }
 }
 

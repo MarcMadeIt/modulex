@@ -1,6 +1,5 @@
 <template>
   <div class="course-view">
-    
     <div class="course-header">
       <button @click="exitCourse" class="btn btn-light">
         <ArrowLeft :size="18" />
@@ -27,7 +26,7 @@
       </div>
 
       <div class="course-content">
-        <div class="step-header">          
+        <div class="step-header">
           <div class="step-type">
             <BookOpen :size="18" />
             <span>Modul {{ currentIndex + 1 }}</span>
@@ -117,7 +116,7 @@
           <span>Jeg bekræfter at have set indholdet</span>
         </label>
 
-        <div class="course-nav">          
+        <div class="course-nav">
           <button
             class="course-nav-back"
             @click="prevStep"
@@ -188,6 +187,10 @@ const isLastStep = computed(() => {
 
 const progress = computed(() => {
   return course.value?.progress?.percentage ?? 0;
+});
+
+const isReviewMode = computed(() => {
+  return route.query.review === "true";
 });
 
 onMounted(() => {
@@ -263,10 +266,16 @@ async function loadCourse() {
     const completedCount = courseData.progress?.completed ?? 0;
 
     if (course.value.items.length > 0) {
-      currentIndex.value = Math.min(
-        completedCount,
-        course.value.items.length - 1,
-      );
+      if (isReviewMode.value) {
+        currentIndex.value = 0;
+        confirmed.value = true;
+      } else {
+        currentIndex.value = Math.min(
+          completedCount,
+          course.value.items.length - 1,
+        );
+        confirmed.value = false;
+      }
     }
   } catch (error) {
     console.error("CourseView fejl:", error);
@@ -296,6 +305,18 @@ function mapModuleForFrontend(module) {
 
 async function nextStep() {
   if (!confirmed.value || !currentStep.value) return;
+
+  if (isReviewMode.value) {
+    if (isLastStep.value) {
+      router.push("/dashboard");
+      return;
+    }
+
+    currentIndex.value++;
+    confirmed.value = true;
+    scrollToTop();
+    return;
+  }
 
   try {
     const result = await markCurrentModuleCompleted();
@@ -355,7 +376,7 @@ function formatDuration(duration) {
 function prevStep() {
   if (currentIndex.value > 0) {
     currentIndex.value--;
-    confirmed.value = false;
+    confirmed.value = isReviewMode.value;
     scrollToTop();
   }
 }
