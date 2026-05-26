@@ -71,7 +71,25 @@
     }
 
     function closeModal() {
+        if (isSaving.value) return;
+
         emit("close");
+    }
+    // gemmer også fileUrl og size, så PDF'en kan bruges både i backend og UI.
+    function handleFileUpload(event, material) {
+        const file = event.target.files[0];
+
+        if (!file) return;
+
+        material.file = file;
+        material.fileUrl = `/files/${file.name}`;
+        material.size = formatFileSize(file);
+
+        if (!material.title.trim()) {
+            material.title = file.name;
+        }
+
+        event.target.value = "";
     }
 
     function handleFileUpload(event, material) {
@@ -398,7 +416,7 @@
 
             <footer class="modal-footer">
                 <button class="btn btn-light"
-                        type="button"
+                        type="button"                        
                         @click="closeModal">
                     Annuller
                 </button>

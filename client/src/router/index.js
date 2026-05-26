@@ -47,6 +47,12 @@ const routes = [
         component: () => import("../pages/dashboard/CourseView.vue"),
         props: true,
       },
+      {
+        path: "courses",
+        name: "Courses",
+        meta: { roles: ["client", "admin"] },
+        component: () => import("../pages/dashboard/DashboardHome.vue"),
+      },
     ],
   },
 ];

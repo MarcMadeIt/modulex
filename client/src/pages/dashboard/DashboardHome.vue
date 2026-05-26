@@ -16,7 +16,7 @@
       </div>
 
       <div class="dashboard-hero-pattern">
-        <span v-for="n in 8" :key="n"></span>
+        <span v-for="n in 12" :key="n"></span>
       </div>
     </section>
 
@@ -76,7 +76,7 @@
 
           <div class="card-header">
             <div class="icon-box">
-              {{ course.icon }}
+              <BookOpen />
             </div>
 
             <span
@@ -96,6 +96,11 @@
           <p class="card-text">
             {{ course.description }}
           </p>
+          <div class="course-card-meta">
+            <span>{{ course.moduleCount }} moduler</span>
+            <span class="meta-dot">•</span>
+            <span>{{ course.totalDuration }} min</span>
+          </div>
 
           <div class="card-actions">
             <AppButton variant="text" arrow>
@@ -118,6 +123,7 @@
 import { computed, ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 
+import { auth } from "../../stores/auth";
 import AppCard from "../../components/ui/AppCard.vue";
 import AppButton from "../../components/ui/AppButton.vue";
 
@@ -127,16 +133,41 @@ import {
   dummyUserProgresses,
 } from "../../data/dummyData.js";
 
+import {
+  BookOpen,
+  Clock3,
+  CircleCheck,
+  GraduationCap,
+  Book,
+} from "lucide-vue-next";
+
 const router = useRouter();
 
-const companyName = "Billund Design ApS";
+// const companyName = "Billund Design ApS";
+const companyName = computed(() => {
+  return (
+    auth.state.user?.id ||
+    auth.state.user?._id ||
+    auth.state.user?.userId ||
+    "ingen user id fundet"
+  );
+});
 const activeFilter = ref("all");
 
 const courses = ref([]);
 
-onMounted(() => {
+onMounted(async () => {
+  console.log("AUTH USER før fetchMe:", auth.state.user);
+
+  if (!auth.state.ready) {
+    await auth.fetchMe();
+  }
+
+  console.log("AUTH USER efter fetchMe:", auth.state.user);
+
   loadCourses();
 });
+
 const STORAGE_KEY = "modulex_dummy_data";
 const CURRENT_USER_ID = "665000000000000000000002";
 
@@ -179,9 +210,17 @@ function mapCoursesForFrontend(data) {
       progress,
       completed: progress >= 100,
       moduleCount: courseModules.length,
+      totalDuration: getTotalDuration(courseModules),
       modules: courseModules,
     };
   });
+
+  function getTotalDuration(modules) {
+    return modules.reduce((total, module) => {
+      const minutes = parseInt(module.duration) || 0;
+      return total + minutes;
+    }, 0);
+  }
 }
 
 function loadCourses() {
@@ -240,5 +279,183 @@ function goToFirstCourse() {
 .filter-button-reset:hover {
   background: var(--color-error);
   color: white;
+}
+
+.course-card {
+  min-height: 260px;
+  padding: var(--space-5);
+  cursor: pointer;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.course-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-card);
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-5);
+}
+
+.icon-box {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-md);
+  background: rgba(239, 65, 35, 0.08);
+  color: var(--color-primary-orange);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+}
+
+.course-card .card-title {
+  font-size: var(--text-md);
+  margin-bottom: var(--space-3);
+}
+
+.course-card .card-text {
+  min-height: 48px;
+  line-height: 1.5;
+}
+
+.course-card-meta {
+  display: flex;
+  gap: var(--space-4);
+  margin-top: var(--space-5);
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.course-card .card-actions {
+  margin-top: var(--space-5);
+}
+
+.meta-dot {
+  opacity: 0.4;
+}
+
+.dashboard-hero {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  min-height: 280px;
+  padding: 48px 64px;
+  border-radius: 32px;
+  background: #191919;
+  color: #fff;
+}
+
+.dashboard-hero-content {
+  position: relative;
+  z-index: 2;
+  max-width: 680px;
+}
+
+.dashboard-hero h1 {
+  margin: 0 0 20px;
+  font-size: clamp(36px, 3.6vw, 56px);
+  line-height: 1.05;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+}
+
+.dashboard-hero h1 span {
+  color: #ff3b22;
+}
+
+.dashboard-hero p {
+  max-width: 760px;
+  margin: 0 0 40px;
+  color: #a6adba;
+  font-size: clamp(18px, 1.6vw, 28px);
+  line-height: 1.55;
+  font-weight: 500;
+}
+
+.dashboard-hero-pattern {
+  position: absolute;
+  right: -72px;
+  bottom: -100px;
+  z-index: 1;
+
+  width: 48%;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 22px;
+  padding: 28px 0;
+
+  opacity: 0.1;
+  pointer-events: none;
+}
+
+.dashboard-hero-pattern span {
+  aspect-ratio: 1;
+  border-radius: 14px;
+  background: #fff;
+  transform: scale(1);
+  transition:
+    transform 350ms ease,
+    opacity 350ms ease;
+}
+
+.dashboard-hero:hover .dashboard-hero-pattern span {
+  transform: scale(1.08);
+  opacity: 1;
+}
+
+.dashboard-hero-pattern span:nth-child(1) {
+  transition-delay: 50ms;
+}
+
+.dashboard-hero-pattern span:nth-child(2) {
+  transition-delay: 100ms;
+}
+
+.dashboard-hero-pattern span:nth-child(3) {
+  transition-delay: 150ms;
+}
+
+.dashboard-hero-pattern span:nth-child(4) {
+  transition-delay: 200ms;
+}
+
+.dashboard-hero-pattern span:nth-child(5) {
+  transition-delay: 250ms;
+}
+
+.dashboard-hero-pattern span:nth-child(6) {
+  transition-delay: 300ms;
+}
+
+.dashboard-hero-pattern span:nth-child(7) {
+  transition-delay: 350ms;
+}
+
+.dashboard-hero-pattern span:nth-child(8) {
+  transition-delay: 400ms;
+}
+
+.dashboard-hero-pattern span:nth-child(9) {
+  transition-delay: 450ms;
+}
+
+.dashboard-hero-pattern span:nth-child(10) {
+  transition-delay: 500ms;
+}
+
+.dashboard-hero-pattern span:nth-child(11) {
+  transition-delay: 550ms;
+}
+
+.dashboard-hero-pattern span:nth-child(12) {
+  transition-delay: 600ms;
 }
 </style>
