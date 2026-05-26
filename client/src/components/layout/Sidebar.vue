@@ -31,7 +31,7 @@ import { auth } from "../../stores/auth";
 const router = useRouter();
 const navItems = [
     { label: 'Dashboard', path: '/dashboard' },
-    { label: 'Kurser', path: '/courses' },
+    { label: 'Kurser', path: '/dashboard/courses' },
     { label: 'Indstillinger', path: '/settings' }
 ];
 const handleLogout = async () => {

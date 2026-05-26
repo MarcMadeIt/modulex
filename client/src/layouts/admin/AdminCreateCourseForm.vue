@@ -1,13 +1,13 @@
 ﻿<script setup>
     import { computed, ref } from "vue";
-
+    
     import { createCourse } from "../../data/dummyCourseService.js";
 
     const emit = defineEmits(["close"]);
 
     const courseTitle = ref("");
-    const courseDescription = ref("");
-
+    const courseDescription = ref("");    
+   
     const lessons = ref([
         {
             id: makeLocalId(),
@@ -33,7 +33,7 @@
     function removeLesson(lessonId) {
         lessons.value = lessons.value.filter((lesson) => lesson.id !== lessonId);
     }
-
+    // fileUrl og size er tilføjet, så PDF-data kan sendes videre til backend og vises korrekt bagefter.
     function addMaterial(lesson, type) {
         lesson.materials.push({
             id: makeLocalId(),
@@ -41,6 +41,8 @@
             title: "",
             youtubeUrl: "",
             file: null,
+            fileUrl: "",
+            size: "",
         });
     }
 
@@ -71,15 +73,19 @@
     }
 
     function closeModal() {
+        if (isSaving.value) return;
+
         emit("close");
     }
-
+    // gemmer også fileUrl og size, så PDF'en kan bruges både i backend og UI.
     function handleFileUpload(event, material) {
         const file = event.target.files[0];
 
         if (!file) return;
 
         material.file = file;
+        material.fileUrl = `/files/${file.name}`;
+        material.size = formatFileSize(file);
 
         if (!material.title.trim()) {
             material.title = file.name;
@@ -128,7 +134,7 @@
         }
 
         if (material.type === "pdf") {
-            return hasTitle && material.file;
+            return hasTitle && material.file && material.fileUrl !== "";
         }
 
         return false;
@@ -136,6 +142,7 @@
 
     const isFormValid = computed(() => {
         const hasCourseTitle = courseTitle.value.trim() !== "";
+        const hasCourseDescription = courseDescription.value.trim() !== "";
 
         const hasValidLessons = lessons.value.every((lesson) => {
             const hasLessonTitle = lesson.title.trim() !== "";
@@ -148,47 +155,51 @@
             return hasLessonTitle && hasDuration && hasMaterials && allMaterialsValid;
         });
 
-        return hasCourseTitle && hasValidLessons;
+        return hasCourseTitle && hasCourseDescription && hasValidLessons;
     });
 
     function createNewCourse() {
-        if (!isFormValid.value) return;
+    if (!isFormValid.value) return;
 
-        const newCourse = {
-            title: courseTitle.value.trim(),
-            description: courseDescription.value.trim(),
+    const newCourse = {
+        title: courseTitle.value.trim(),
+        description: courseDescription.value.trim(),
 
-            modules: lessons.value.map((lesson) => {
-                return {
-                    title: lesson.title.trim(),
-                    description: "",
-                    duration: lesson.duration.trim(),
+        modules: lessons.value.map((lesson) => {
+            return {
+                title: lesson.title.trim(),
+                description: "",
+                duration: lesson.duration.trim(),
 
-                    materials: lesson.materials.map((material) => {
-                        if (material.type === "video") {
-                            return {
-                                type: "video",
-                                title: material.title.trim(),
-                                url: getYoutubeEmbedUrl(material.youtubeUrl),
-                                duration: lesson.duration.trim(),
-                            };
-                        }
-
+                materials: lesson.materials.map((material) => {
+                    if (material.type === "video") {
                         return {
-                            type: "pdf",
+                            type: "video",
                             title: material.title.trim(),
-                            fileUrl: `/files/${material.file.name}`,
-                            size: formatFileSize(material.file),
+                            url: getYoutubeEmbedUrl(material.youtubeUrl),
+                            duration: lesson.duration.trim(),
                         };
-                    }),
-                };
-            }),
-        };
+                    }
 
-        createCourse(newCourse);
+                    return {
+                        type: "pdf",
+                        title: material.title.trim(),
+                        url: material.fileUrl,
+                        fileUrl: material.fileUrl,
+                        size: material.size,
+                    };
+                }),
+            };
+        }),
+    };
 
-        emit("close");
-    }
+    // ÆNDRING: Backend-kaldet er fjernet, fordi adminCourseApiService.js ikke længere findes.
+    // Kurset gemmes nu kun via den lokale dummyCourseService.
+    createCourse(newCourse);
+
+    emit("close");
+}
+        
 </script>
 
 <template>
@@ -286,11 +297,7 @@
                                     </strong>
 
                                     <p>
-                                        {{
-                      material.type === "video"
-                        ? "YouTube-link"
-                        : "PDF-fil"
-                                        }}
+                                        {{ material.type === "video" ? "YouTube-link" : "PDF-fil" }}
                                     </p>
                                 </div>
 
@@ -357,19 +364,11 @@
                                     <span class="upload-icon">↑</span>
 
                                     <strong>
-                                        {{
-                      material.file
-                        ? material.file.name
-                        : "Klik for at uploade PDF"
-                                        }}
+                                        {{ material.file ? material.file.name : "Klik for at uploade PDF" }}
                                     </strong>
 
                                     <small>
-                                        {{
-                      material.file
-                        ? formatFileSize(material.file)
-                        : "Max 500MB"
-                                        }}
+                                        {{ material.file ? formatFileSize(material.file) : "Max 500MB" }}
                                     </small>
 
                                     <input type="file"
@@ -396,17 +395,18 @@
                 </section>
             </div>
 
+
             <footer class="modal-footer">
                 <button class="btn btn-light"
-                        type="button"
+                        type="button"                        
                         @click="closeModal">
                     Annuller
                 </button>
 
                 <button class="btn btn-primary"
-                        type="button"
-                        :disabled="!isFormValid"
-                        @click="createNewCourse">
+                    type="button"
+                    :disabled="!isFormValid"
+                    @click="createNewCourse">
                     Opret kursus nu
                 </button>
             </footer>
@@ -511,4 +511,5 @@
     .remove-material-btn {
         color: #ff4d26 !important;
     }
+
 </style>
