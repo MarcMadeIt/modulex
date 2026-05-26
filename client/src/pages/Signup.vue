@@ -62,8 +62,29 @@
             type="email"
             placeholder="navn@firma.dk"
             class="input"
+            :readonly="emailLocked"
+            :style="
+              emailLocked
+                ? {
+                    backgroundColor: '#f3f4f6',
+                    color: '#6b7280',
+                    cursor: 'not-allowed',
+                  }
+                : {}
+            "
             required
           />
+          <p
+            v-if="emailLocked"
+            style="
+              margin-top: 8px;
+              font-size: 0.75rem;
+              color: #9ca3af;
+              font-weight: 500;
+            "
+          >
+            🔒 Email er hentet fra dit registreringslink og kan ikke ændres.
+          </p>
         </div>
 
         <div class="input-group">
@@ -200,17 +221,30 @@
 </template>
 
 <script setup>
-import { ref, computed } from "vue";
-import { useRouter } from "vue-router";
+import { ref, computed, onMounted } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import { auth } from "../stores/auth";
- 
-const API_URL = import.meta.env.VITE_API_URL;
+
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 const router = useRouter();
+const route = useRoute();
 
 const email = ref("");
 const password = ref("");
 const confirmPassword = ref("");
 const errorMessage = ref("");
+
+// Sættes hvis email kommer med i registreringslinket (?email=...) — så låses feltet,
+// og brugeren skal kun vælge et password.
+const emailLocked = ref(false);
+
+onMounted(() => {
+  const prefillEmail = String(route.query.email ?? "").trim();
+  if (prefillEmail) {
+    email.value = prefillEmail;
+    emailLocked.value = true;
+  }
+});
 
 const hasLength = computed(() => password.value.length >= 8);
 const hasUpper = computed(() => /[A-ZÆØÅ]/.test(password.value));

@@ -1,13 +1,19 @@
 import { createRouter, createWebHistory } from "vue-router";
 import DashboardLayout from "../layouts/DashboardLayout.vue";
-import { auth } from "../stores/auth";
- 
+
 const routes = [
-  { path: "/", redirect: "/login" },
+  {
+    path: "/",
+    redirect: "/login", // Sender automatisk brugere til login som start
+  },
   {
     path: "/login",
     name: "Login",
     component: () => import("../pages/Login.vue"),
+  },
+  {
+    path: "/",
+    redirect: "/signup", // Sender automatisk brugere til signup som start
   },
   {
     path: "/signup",
@@ -15,32 +21,39 @@ const routes = [
     component: () => import("../pages/Signup.vue"),
   },
   {
-    path: "/survey",
-    name: "Survey",
-    component: () => import("../pages/survey/Survey.vue"),
+    path: "/login",
+    name: "Login",
+    component: () => import("../pages/Login.vue"),
   },
   {
     path: "/dashboard",
     component: DashboardLayout,
-    meta: { requiresAuth: true }, 
     children: [
       {
         path: "",
         name: "DashboardHome",
-        meta: { roles: ["client", "admin"] }, 
         component: () => import("../pages/dashboard/DashboardHome.vue"),
       },
+
       {
         path: "admin",
         name: "Admin",
-        meta: { roles: ["admin"] }, 
-        component: () => import("../layouts/admin/AdminDashboardHome.vue"),
+          component: () => import("../layouts/admin/AdminDashboardHome.vue"),
       },
+
+
       {
         path: "/dashboardtest",
         name: "Dashboardtest",
         component: () => import("../pages/Dashboard.vue"),
-      },
+        },
+
+        {
+            path: "/admincourse",
+            name: "Admincourse",
+            component: () => import("../layouts/admin/AdminCoursesDashboard.vue"),
+        },
+
       {
         path: "course/:id",
         name: "CourseView",
@@ -48,30 +61,20 @@ const routes = [
         props: true,
       },
     ],
+    },
+
+
+  {
+    path: "/survey",
+    name: "Survey",
+    component: () => import("../pages/survey/Survey.vue"),
   },
+
 ];
- 
+
 const router = createRouter({
   history: createWebHistory(),
   routes,
 });
- 
-router.beforeEach((to) => {
-  const requiresAuth = to.matched.some((r) => r.meta.requiresAuth);
-  if (!requiresAuth) return true;
- 
-  
-  if (!auth.isLoggedIn) {
-    return { name: "Login", query: { redirect: to.fullPath } };
-  }
- 
-  
-  const roleRule = [...to.matched].reverse().find((r) => r.meta.roles);
-  if (roleRule && !roleRule.meta.roles.includes(auth.role)) {
-    return auth.role === "admin" ? "/dashboard/admin" : "/dashboard";
-  }
- 
-  return true;
-});
- 
+
 export default router;

@@ -4,22 +4,46 @@ import { SurveyResponse, IAnswer } from "../models/SurveyResponse";
 
 export const submitSurvey = async (req: Request, res: Response) => {
   try {
-    const { email, companyName, contactPerson, phone, answers } = req.body;
+    const { companyName, contactPerson, phone, answers } = req.body;
+    const email = String(req.body.email ?? "").trim().toLowerCase();
+
+    if (!email) {
+      return res.status(400).json({ error: { message: "Email is required" } });
+    }
+
+    if (!companyName || !contactPerson || !phone) {
+      return res
+        .status(400)
+        .json({ error: { message: "Missing required fields" } });
+    }
 
     const existing = await User.findOne({ email });
-    if (existing) {
+
+    // Allerede registreret (har udfyldt survey før / er aktiv) -> afvis.
+    // En forhåndsoprettet lead (pending_survey) må derimod gerne udfylde nu.
+    if (existing && existing.status !== "pending_survey") {
       return res.status(409).json({
         error: { message: "Email is already registered" },
       });
     }
 
-    const user = await User.create({
-      email,
-      companyName,
-      contactPerson,
-      phone,
-      status: "pending_approval",
-    });
+    let user;
+    if (existing) {
+      // Lead udfylder spørgeskemaet -> ryk fra "Igangværende" til "Klar til kursus".
+      existing.companyName = companyName;
+      existing.contactPerson = contactPerson;
+      existing.phone = phone;
+      existing.status = "pending_approval";
+      user = await existing.save();
+    } else {
+      user = await User.create({
+        email,
+        companyName,
+        contactPerson,
+        phone,
+        status: "pending_approval",
+      });
+    }
 
     // Convert answers map to array format expected by the schema.
     const answerList: IAnswer[] = Object.entries(answers ?? {}).map(
@@ -30,13 +54,17 @@ export const submitSurvey = async (req: Request, res: Response) => {
     );
 
     try {
-      await SurveyResponse.create({
-        userId: user._id,
-        userEmail: user.email,
-        answers: answerList,
-      });
+      // Upsert så en lead kan gen-indsende uden at ramme unikt userId-index.
+      await SurveyResponse.findOneAndUpdate(
+        { userId: user._id },
+        { userEmail: user.email, answers: answerList },
+        { upsert: true, setDefaultsOnInsert: true, new: true },
+      );
     } catch (err) {
-      await User.deleteOne({ _id: user._id });
+      // Kun ryd op hvis vi lige har oprettet brugeren her.
+      if (!existing) {
+        await User.deleteOne({ _id: user._id });
+      }
       throw err;
     }
 
