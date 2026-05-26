@@ -430,6 +430,9 @@
     }
 
     function normalizeLead(lead) {
+        // Surveyen sendes altid ved leadoprettelse (Send spørgeskema -> nodemailer),
+        // så leads i Igangværende har altid surveySent=true. Den eneste lead-handling
+        // herfra er "Simuler svar" (til test).
         return {
             id: lead.id || crypto.randomUUID(),
             email: lead.email || "",
@@ -438,8 +441,8 @@
             status: lead.status || "Survey sendt",
             statusClass: lead.statusClass || "waiting",
             surveyProgress: lead.surveyProgress ?? 35,
-            action: lead.action || "Simuler svar",
-            surveySent: lead.surveySent ?? true,
+            action: "Simuler svar",
+            surveySent: true,
             hasSurveyAnswers:
                 lead.hasSurveyAnswers ?? lead.surveyProgress === 100,
         };
@@ -530,6 +533,7 @@
     }
 
     function handleLeadAction(lead) {
+<<<<<<< Updated upstream
         if (lead.action === "Simuler svar") {
             const emailName = lead.email.split("@")[0];
             const emailDomain = lead.email.split("@")[1] || "ukendt.dk";
@@ -544,6 +548,24 @@
 
             saveLeads();
         }
+=======
+        // Simulér at kunden har udfyldt surveyen og ryk leadet
+        // over i "Klar til kursus" tab. Bruges kun til test.
+        const emailName = lead.email.split("@")[0];
+        const emailDomain = lead.email.split("@")[1] || "ukendt.dk";
+
+        lead.name = emailName;
+        lead.company = emailDomain;
+        lead.status = "Survey besvaret";
+        lead.statusClass = "lead-ready";
+        lead.surveyProgress = 100;
+        lead.action = "Afventer kursustildeling";
+        lead.hasSurveyAnswers = true;
+
+        saveLeads();
+
+        activeTab.value = "partners";
+>>>>>>> Stashed changes
     }
 
     function activateLeadAndSendCourses(lead) {
