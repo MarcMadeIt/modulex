@@ -84,14 +84,22 @@
                 ></iframe>
               </template>
 
-              <template v-else-if="material.type === 'pdf' && material.fileUrl">
+              <template
+                v-else-if="
+                  material.type === 'pdf' && (material.fileUrl || material.url)
+                "
+              >
                 <iframe
                   class="course-pdf"
-                  :src="material.fileUrl"
+                  :src="material.fileUrl || material.url"
                   :title="material.title"
                 ></iframe>
 
-                <a :href="material.fileUrl" target="_blank" class="pdf-link">
+                <a
+                  :href="material.fileUrl || material.url"
+                  target="_blank"
+                  class="pdf-link"
+                >
                   Åbn PDF i ny fane
                 </a>
               </template>
