@@ -136,13 +136,7 @@ import AppCard from "../../components/ui/AppCard.vue";
 import AppButton from "../../components/ui/AppButton.vue";
 import ProgressBar from "../../components/ui/ProgressBar.vue";
 
-import {
-  BookOpen,
-  Clock3,
-  CircleCheck,
-  GraduationCap,
-  Book,
-} from "lucide-vue-next";
+import { BookOpen } from "lucide-vue-next";
 
 const router = useRouter();
 const API_URL = import.meta.env.VITE_API_URL;
@@ -154,14 +148,7 @@ const loading = ref(true);
 const errorMessage = ref("");
 
 const companyName = computed(() => {
-  return (
-    currentUser.value?.companyName ||
-    currentUser.value?.company ||
-    currentUser.value?.name ||
-    currentUser.value?.contactPerson ||
-    currentUser.value?.email ||
-    "din virksomhed"
-  );
+  return currentUser.value?.contactPerson || "virksomhed";
 });
 
 const filteredCourses = computed(() => {
@@ -196,10 +183,7 @@ async function loadDashboard() {
     }
 
     const data = await response.json();
-
-    console.log("COURSES FROM API:", data);
-
-    const apiCourses = data.courses || data;
+    const apiCourses = data.courses;
 
     if (!Array.isArray(apiCourses)) {
       throw new Error("API returnerede ikke en gyldig kursusliste.");
@@ -249,32 +233,7 @@ function mapApiCoursesForFrontend(apiCourses) {
     };
   });
 
-  function getTotalDuration(modules) {
-    return modules.reduce((total, module) => {
-      const minutes = parseInt(module.duration) || 0;
-      return total + minutes;
-    }, 0);
-  }
-}
-
-function mapModuleForFrontend(module) {
-  return {
-    id: module._id || module.id,
-    courseId: module.courseId,
-    title: module.title,
-    description: module.description || "",
-    order: module.order || 0,
-    duration: module.duration || "",
-    materials: module.materials || module.contents || [],
-    completed: false,
-  };
-}
-
-function getTotalDuration(modules) {
-  return modules.reduce((total, module) => {
-    const minutes = parseInt(module.duration) || 0;
-    return total + minutes;
-  }, 0);
+  console.log("COURSE:", courses.value);
 }
 
 function openCourse(course) {
@@ -292,12 +251,6 @@ function goToFirstCourse() {
     openCourse(firstActiveCourse);
   }
 }
-
-function getCourseButtonText(course) {
-  if (course.completed) return "Gense";
-  if (course.progress > 0) return "Fortsæt";
-  return "Start";
-}
 </script>
 
 <style scoped>
@@ -311,184 +264,6 @@ function getCourseButtonText(course) {
 .course-card:hover {
   transform: translateY(-4px);
   box-shadow: var(--shadow-card);
-}
-
-.course-card {
-  min-height: 260px;
-  padding: var(--space-5);
-  cursor: pointer;
-  transition:
-    transform 0.2s ease,
-    box-shadow 0.2s ease;
-}
-
-.course-card:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-card);
-}
-
-.card-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: var(--space-5);
-}
-
-.icon-box {
-  width: 48px;
-  height: 48px;
-  border-radius: var(--radius-md);
-  background: rgba(239, 65, 35, 0.08);
-  color: var(--color-primary-orange);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.4rem;
-}
-
-.course-card .card-title {
-  font-size: var(--text-md);
-  margin-bottom: var(--space-3);
-}
-
-.course-card .card-text {
-  min-height: 48px;
-  line-height: 1.5;
-}
-
-.course-card-meta {
-  display: flex;
-  gap: var(--space-4);
-  margin-top: var(--space-5);
-  color: var(--color-text-secondary);
-  font-size: var(--text-sm);
-  font-weight: 800;
-  text-transform: uppercase;
-}
-
-.course-card .card-actions {
-  margin-top: var(--space-5);
-}
-
-.meta-dot {
-  opacity: 0.4;
-}
-
-.dashboard-hero {
-  position: relative;
-  overflow: hidden;
-  display: flex;
-  min-height: 280px;
-  padding: 48px 64px;
-  border-radius: 32px;
-  background: #191919;
-  color: #fff;
-}
-
-.dashboard-hero-content {
-  position: relative;
-  z-index: 2;
-  max-width: 680px;
-}
-
-.dashboard-hero h1 {
-  margin: 0 0 20px;
-  font-size: clamp(36px, 3.6vw, 56px);
-  line-height: 1.05;
-  font-weight: 800;
-  letter-spacing: -0.04em;
-}
-
-.dashboard-hero h1 span {
-  color: #ff3b22;
-}
-
-.dashboard-hero p {
-  max-width: 760px;
-  margin: 0 0 40px;
-  color: #a6adba;
-  font-size: clamp(18px, 1.6vw, 28px);
-  line-height: 1.55;
-  font-weight: 500;
-}
-
-.dashboard-hero-pattern {
-  position: absolute;
-  right: -72px;
-  bottom: -100px;
-  z-index: 1;
-
-  width: 48%;
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 22px;
-  padding: 28px 0;
-
-  opacity: 0.1;
-  pointer-events: none;
-}
-
-.dashboard-hero-pattern span {
-  aspect-ratio: 1;
-  border-radius: 14px;
-  background: #fff;
-  transform: scale(1);
-  transition:
-    transform 350ms ease,
-    opacity 350ms ease;
-}
-
-.dashboard-hero:hover .dashboard-hero-pattern span {
-  transform: scale(1.08);
-  opacity: 1;
-}
-
-.dashboard-hero-pattern span:nth-child(1) {
-  transition-delay: 50ms;
-}
-
-.dashboard-hero-pattern span:nth-child(2) {
-  transition-delay: 100ms;
-}
-
-.dashboard-hero-pattern span:nth-child(3) {
-  transition-delay: 150ms;
-}
-
-.dashboard-hero-pattern span:nth-child(4) {
-  transition-delay: 200ms;
-}
-
-.dashboard-hero-pattern span:nth-child(5) {
-  transition-delay: 250ms;
-}
-
-.dashboard-hero-pattern span:nth-child(6) {
-  transition-delay: 300ms;
-}
-
-.dashboard-hero-pattern span:nth-child(7) {
-  transition-delay: 350ms;
-}
-
-.dashboard-hero-pattern span:nth-child(8) {
-  transition-delay: 400ms;
-}
-
-.dashboard-hero-pattern span:nth-child(9) {
-  transition-delay: 450ms;
-}
-
-.dashboard-hero-pattern span:nth-child(10) {
-  transition-delay: 500ms;
-}
-
-.dashboard-hero-pattern span:nth-child(11) {
-  transition-delay: 550ms;
-}
-
-.dashboard-hero-pattern span:nth-child(12) {
-  transition-delay: 600ms;
 }
 
 .dashboard-error {
