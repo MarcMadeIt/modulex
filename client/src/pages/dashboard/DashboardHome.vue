@@ -144,14 +144,6 @@ import {
   Book,
 } from "lucide-vue-next";
 
-import {
-  BookOpen,
-  Clock3,
-  CircleCheck,
-  GraduationCap,
-  Book,
-} from "lucide-vue-next";
-
 const router = useRouter();
 const API_URL = import.meta.env.VITE_API_URL;
 
