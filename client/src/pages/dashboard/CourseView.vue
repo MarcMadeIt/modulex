@@ -174,10 +174,10 @@ onMounted(() => {
     return {
       title: module.title,
       description: module.description,
-      duration: module.duration,
       type: material.type,
       url: material.url,
       fileUrl: material.fileUrl,
+      duration: material.duration,
     };
   });
 }),

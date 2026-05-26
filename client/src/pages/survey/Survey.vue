@@ -73,14 +73,9 @@
                     v-model="contactForm.email"
                     type="email"
                     class="input"
-                    :class="{ 'input-locked': emailLocked }"
-                    :readonly="emailLocked"
                     placeholder="din@email.dk"
                     required
                   />
-                  <p v-if="emailLocked" class="input-hint">
-                    🔒 Knyttet til din invitation og kan ikke ændres.
-                  </p>
                 </div>
 
                 <div class="form-group">
@@ -161,11 +156,9 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
-import { useRoute } from "vue-router";
 import ProgressBar from "../../components/ui/ProgressBar.vue";
 import { dummyQuestions } from "../../data/surveyQuestions";
 const API_URL = import.meta.env.VITE_API_URL;
-const route = useRoute();
 
 type SurveyOption = {
   value: string;
@@ -188,9 +181,6 @@ const error = ref<string | null>(null);
 const contactError = ref<string | null>(null);
 const contactSuccess = ref(false);
 
-// Sættes hvis email kommer med i URL'en (fra invitations-mailen) — så låses feltet.
-const emailLocked = ref(false);
-
 const contactForm = ref({
   companyName: "",
   contactPerson: "",
@@ -207,13 +197,6 @@ const progress = computed(() => {
 
 onMounted(() => {
   fetchQuestions();
-
-  // Forudfyld og lås email-feltet hvis den er sendt med i URL'en (?email=...).
-  const prefillEmail = String(route.query.email ?? "").trim();
-  if (prefillEmail) {
-    contactForm.value.email = prefillEmail;
-    emailLocked.value = true;
-  }
 });
 
 function fetchQuestions() {
@@ -486,22 +469,5 @@ async function handleContactSubmit() {
 .input::placeholder {
   color: var(--color-text-secondary);
   opacity: 0.7;
-}
-
-.input-locked {
-  background-color: var(--color-primary-ultralight);
-  color: var(--color-text-secondary);
-  cursor: not-allowed;
-}
-
-.input-locked:focus {
-  border-color: var(--color-border-light);
-  background-color: var(--color-primary-ultralight);
-}
-
-.input-hint {
-  margin-top: var(--space-2);
-  font-size: var(--text-xs);
-  color: var(--color-text-secondary);
 }
 </style>

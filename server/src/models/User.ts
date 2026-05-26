@@ -27,11 +27,9 @@ const userSchema = new Schema<IUser>(
       lowercase: true,
       trim: true,
     },
-    // Valgfri ved oprettelse: en lead kan gemmes "kun med mail" (status pending_survey)
-    // og udfyldes når kunden besvarer spørgeskemaet.
-    companyName: { type: String, trim: true, default: "" },
-    contactPerson: { type: String, trim: true, default: "" },
-    phone: { type: String, trim: true, default: "" },
+    companyName: { type: String, required: true, trim: true },
+    contactPerson: { type: String, required: true, trim: true },
+    phone: { type: String, required: true, trim: true },
     password: { type: String },
     role: { type: String, enum: ["admin", "client"], default: "client" },
     status: {
