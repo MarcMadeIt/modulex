@@ -37,7 +37,7 @@
 
           <h2>{{ currentStep.title }}</h2>
           <div v-if="currentStep.duration" class="step-duration">
-            ⏱ {{ currentStep.duration }}
+            ⏱ {{ formatDuration(currentStep.duration) }}
           </div>
 
           <p>
@@ -64,7 +64,7 @@
               <h3>{{ material.title }}</h3>
 
               <small v-if="material.duration || material.size">
-                {{ material.duration || material.size }}
+                {{ formatDuration(material.duration) || material.size }}
               </small>
             </div>
 
@@ -189,13 +189,7 @@ const isLastStep = computed(() => {
 });
 
 const progress = computed(() => {
-  if (!course.value || course.value.items.length === 0) return 0;
-
-  const completedModuleIds = getCompletedModuleIds();
-
-  return Math.round(
-    (completedModuleIds.length / course.value.items.length) * 100,
-  );
+  return course.value?.progress?.percentage ?? 0;
 });
 
 onMounted(() => {
@@ -232,7 +226,6 @@ async function loadCourse() {
 
     console.log("COURSE FROM API:", courseData);
     console.log("MODULES FROM API:", modulesData);
-
     const apiCourse = courseData.course || courseData;
     const apiModules = modulesData.modules || modulesData;
 
@@ -269,8 +262,13 @@ async function loadCourse() {
         .map(mapModuleForFrontend),
     };
 
+    const completedCount = courseData.progress?.completed ?? 0;
+
     if (course.value.items.length > 0) {
-      currentIndex.value = getFirstIncompleteModuleIndex();
+      currentIndex.value = Math.min(
+        completedCount,
+        course.value.items.length - 1,
+      );
     }
   } catch (error) {
     console.error("CourseView fejl:", error);
@@ -286,6 +284,8 @@ async function loadCourse() {
 }
 
 function mapModuleForFrontend(module) {
+  console.log("MODULE FROM API:", module);
+  console.log("MATERIALS FROM API:", module.materials);
   return {
     id: module._id || module.id,
     title: module.title,
@@ -296,51 +296,27 @@ function mapModuleForFrontend(module) {
   };
 }
 
-// function nextStep() {
-//   if (!confirmed.value) return;
-
-//   if (isLastStep.value) {
-//     router.push("/dashboard");
-//     return;
-//   }
-
-//   currentIndex.value++;
-//   confirmed.value = false;
-// }
-
-// async function nextStep() {
-//   if (!confirmed.value || !currentStep.value) return;
-
-//   try {
-//     await markCurrentModuleCompleted();
-
-//     if (isLastStep.value) {
-//       router.push("/dashboard");
-//       return;
-//     }
-
-//     currentIndex.value++;
-//     confirmed.value = false;
-//   } catch (error) {
-//     console.error("Kunne ikke gemme progress:", error);
-//     alert("Kunne ikke gemme din progress. Prøv igen.");
-//   }
-// }
-
-function nextStep() {
+async function nextStep() {
   if (!confirmed.value || !currentStep.value) return;
 
-  saveCompletedModuleId(currentStep.value.id);
+  try {
+    const result = await markCurrentModuleCompleted();
 
-  if (isLastStep.value) {
-    router.push("/dashboard");
-    return;
+    if (result?.progress) {
+      course.value.progress = result.progress;
+    }
+
+    if (isLastStep.value) {
+      router.push("/dashboard");
+      return;
+    }
+
+    currentIndex.value++;
+    confirmed.value = false;
+  } catch (error) {
+    console.error("Kunne ikke gemme progress:", error);
+    alert("Kunne ikke gemme din progress. Prøv igen.");
   }
-
-  currentIndex.value++;
-
-  const completedModuleIds = getCompletedModuleIds();
-  confirmed.value = completedModuleIds.includes(currentStep.value?.id);
 }
 
 async function markCurrentModuleCompleted() {
@@ -361,59 +337,24 @@ async function markCurrentModuleCompleted() {
 
   return await response.json();
 }
+
+function formatDuration(duration) {
+  if (!duration) return "";
+
+  const text = String(duration);
+
+  return text.includes("min") ? text : `${text} min`;
+}
+
 function prevStep() {
   if (currentIndex.value > 0) {
     currentIndex.value--;
-
-    const completedModuleIds = getCompletedModuleIds();
-    confirmed.value = completedModuleIds.includes(currentStep.value?.id);
+    confirmed.value = false;
   }
 }
 
 function exitCourse() {
   router.push("/dashboard");
-}
-
-function getProgressStorageKey() {
-  return `modulex_progress_${course.value?.id}`;
-}
-
-function getCompletedModuleIds() {
-  const key = getProgressStorageKey();
-  const saved = localStorage.getItem(key);
-
-  if (!saved) return [];
-
-  try {
-    return JSON.parse(saved);
-  } catch {
-    return [];
-  }
-}
-
-function saveCompletedModuleId(moduleId) {
-  const completedModuleIds = getCompletedModuleIds();
-
-  if (!completedModuleIds.includes(moduleId)) {
-    completedModuleIds.push(moduleId);
-  }
-
-  localStorage.setItem(
-    getProgressStorageKey(),
-    JSON.stringify(completedModuleIds),
-  );
-
-  return completedModuleIds;
-}
-
-function getFirstIncompleteModuleIndex() {
-  const completedModuleIds = getCompletedModuleIds();
-
-  const index = course.value.items.findIndex((module) => {
-    return !completedModuleIds.includes(module.id);
-  });
-
-  return index === -1 ? course.value.items.length - 1 : index;
 }
 </script>
 

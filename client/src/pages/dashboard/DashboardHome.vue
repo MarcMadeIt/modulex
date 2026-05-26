@@ -101,7 +101,7 @@
           <div class="course-card-meta">
             <span>{{ course.moduleCount }} moduler</span>
             <span class="meta-dot">•</span>
-            <span>{{ course.totalDuration }} min</span>
+            <span>{{ course.totalDuration || 0 }} min</span>
           </div>
 
           <div class="card-actions">
@@ -203,7 +203,19 @@ async function loadDashboard() {
       throw new Error("API returnerede ikke en gyldig kursusliste.");
     }
 
-    courses.value = mapApiCoursesForFrontend(apiCourses);
+    // courses.value = mapApiCoursesForFrontend(apiCourses);
+    const mappedCourses = mapApiCoursesForFrontend(apiCourses);
+
+    courses.value = await Promise.all(
+      mappedCourses.map(async (course) => {
+        const totalDuration = await getCourseTotalDuration(course.id);
+
+        return {
+          ...course,
+          totalDuration,
+        };
+      }),
+    );
   } catch (error) {
     console.error("Dashboard fejl:", error);
 
@@ -229,14 +241,8 @@ async function loadAuthUser() {
 
 function mapApiCoursesForFrontend(apiCourses) {
   return apiCourses.map((course) => {
-    const apiProgress = Number(course.progressPct) || 0;
+    const progress = Number(course.progressPct) || 0;
     const totalModules = course.totalModules ?? 0;
-
-    const progress = getLocalCourseProgress(
-      course._id || course.id,
-      apiProgress,
-      totalModules,
-    );
 
     return {
       id: course._id || course.id,
@@ -249,6 +255,41 @@ function mapApiCoursesForFrontend(apiCourses) {
       totalDuration: course.totalDuration ?? 0,
     };
   });
+}
+
+async function getCourseTotalDuration(courseId) {
+  try {
+    const response = await fetch(`${API_URL}/courses/${courseId}/modules`, {
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      console.warn(`Kunne ikke hente moduler for course ${courseId}`);
+      return 0;
+    }
+
+    const data = await response.json();
+    const modules = data.modules || data || [];
+
+    console.log(`MODULES FOR COURSE ${courseId}:`, modules);
+
+    const totalDuration = modules.reduce((total, module) => {
+      console.log("MODULE DURATION:", {
+        title: module.title,
+        duration: module.duration,
+        fullModule: module,
+      });
+
+      return total + (parseInt(module.duration) || 0);
+    }, 0);
+
+    console.log(`TOTAL DURATION FOR COURSE ${courseId}:`, totalDuration);
+
+    return totalDuration;
+  } catch (error) {
+    console.error("Kunne ikke beregne total duration:", error);
+    return 0;
+  }
 }
 
 function mapModuleForFrontend(module) {
@@ -288,22 +329,6 @@ function getCourseButtonText(course) {
   if (course.completed) return "Gense";
   if (course.progress > 0) return "Fortsæt";
   return "Start";
-}
-
-function getLocalCourseProgress(courseId, apiProgress = 0, totalModules = 0) {
-  const saved = localStorage.getItem(`modulex_progress_${courseId}`);
-
-  if (!saved || totalModules === 0) {
-    return apiProgress;
-  }
-
-  try {
-    const completedModuleIds = JSON.parse(saved);
-
-    return Math.round((completedModuleIds.length / totalModules) * 100);
-  } catch {
-    return apiProgress;
-  }
 }
 </script>
 
