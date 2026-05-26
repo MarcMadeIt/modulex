@@ -37,6 +37,10 @@
           />
         </div>
 
+        <div v-if="errorMessage" class="error-message">
+          {{ errorMessage }}
+        </div>
+
         <div style="margin-top: 12px;">
           <button type="submit" class="btn btn-dark btn-full">
             <span>Login</span>
@@ -97,3 +101,15 @@ const handleLogin = async () => {
 };
 
 </script>
+
+<style scoped>
+.error-message {
+  margin-top: 0;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: #ffe7e5;
+  color: #9f2a2a;
+  font-weight: 700;
+  line-height: 1.4;
+}
+</style>
