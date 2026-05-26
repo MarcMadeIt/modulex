@@ -1,6 +1,6 @@
 <template>
   <div class="course-view">
-    <!-- Header -->
+    
     <div class="course-header">
       <button @click="exitCourse" class="btn btn-light">
         <ArrowLeft :size="18" />
@@ -13,12 +13,10 @@
       </div>
     </div>
 
-    <!-- Loading -->
     <div v-if="loading" class="spinner-wrapper">
       <div class="spinner"></div>
     </div>
 
-    <!-- Course content -->
     <div v-else-if="currentStep" class="course-card">
       <div class="course-progress">
         <div
@@ -28,15 +26,15 @@
       </div>
 
       <div class="course-content">
-        <div class="step-header">
+        <div class="step-header">          
           <div class="step-type">
             <PlayCircle v-if="currentStep.type === 'video'" :size="18" />
-
             <FileText v-else-if="currentStep.type === 'pdf'" :size="18" />
-            <span> {{ currentStep.type }}</span>
+            <span>{{ currentStep.type }}</span>
           </div>
 
           <h2>{{ currentStep.title }}</h2>
+
           <div v-if="currentStep.duration" class="step-duration">
             ⏱ {{ currentStep.duration }}
           </div>
@@ -58,21 +56,21 @@
             ></iframe>
           </template>
 
-          
-
           <template v-else-if="currentStep.type === 'pdf'">
-  <div class="content-placeholder-icon">📄</div>
+            <div class="content-placeholder-icon">📄</div>
 
-  <p>{{ currentStep.title }}</p>
+            <p>{{ currentStep.title }}</p>
 
-  <a
-    :href="currentStep.fileUrl"
-    target="_blank"
-    class="pdf-link"
-  >
-    Åbn PDF
-  </a>
-</template>
+            <!-- ÆNDRING: PDF-link bruger først fileUrl og falder tilbage til url. -->
+            <a
+              :href="currentStep.fileUrl || currentStep.url"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="pdf-link"
+            >
+              Åbn PDF
+            </a>
+          </template>
 
           <template v-else>
             <div class="content-placeholder-icon">▤</div>
@@ -85,7 +83,7 @@
           <span>Jeg bekræfter at have set indholdet</span>
         </label>
 
-        <div class="course-nav">
+        <div class="course-nav">          
           <button
             class="course-nav-back"
             @click="prevStep"
@@ -109,7 +107,6 @@
       </div>
     </div>
 
-    <!-- Completed / fallback -->
     <div v-else class="course-card">
       <div class="course-content">
         <h2>Kursus færdigt 🎉</h2>
@@ -131,6 +128,7 @@ import {
   getCourseById,
   completeCourse,
 } from "../../data/dummyCourseService.js";
+
 
 import { PlayCircle, FileText, ArrowLeft, ArrowRight } from "lucide-vue-next";
 
@@ -162,8 +160,8 @@ onMounted(() => {
   const id = route.params.id;
 
   const foundCourse = getCourseById(id);
-  console.log("Found course:", foundCourse);
 
+  // console.log er fjernet.
   if (!foundCourse) {
     course.value = {
       id,
@@ -182,18 +180,20 @@ onMounted(() => {
   course.value = {
     id: foundCourse.id,
     title: foundCourse.title,
+
+    // Der er både url og fileUrl, så PDF'er virker uanset datakilde.
     items: foundCourse.modules.flatMap((module) => {
-  return (module.materials || []).map((material) => {
-    return {
-      title: module.title,
-      description: module.description,
-      type: material.type,
-      url: material.url,
-      fileUrl: material.fileUrl,
-      duration: material.duration,
-    };
-  });
-}),
+      return (module.materials || []).map((material) => {
+        return {
+          title: material.title || module.title,
+          description: module.description,
+          type: material.type,
+          url: material.url,
+          fileUrl: material.fileUrl,          
+          duration: material.duration || module.duration,
+        };
+      });
+    }),
   };
 
   if (course.value.items.length === 0) {
@@ -425,6 +425,7 @@ function exitCourse() {
   opacity: 0.3;
   cursor: not-allowed;
 }
+
 .course-nav-back {
   background: transparent;
   color: var(--color-primary-medium);
@@ -487,6 +488,4 @@ function exitCourse() {
 
   padding: 0.45rem 0.85rem;
 }
-
-
 </style>
