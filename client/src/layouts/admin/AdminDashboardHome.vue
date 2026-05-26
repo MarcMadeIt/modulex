@@ -28,7 +28,7 @@
                 </div>
 
                 <p>KLAR TIL KURSUS</p>
-                <h2>{{ partners.length }}</h2>
+                <h2>{{ klarTilKursus.length }}</h2>
             </AppCard>
 
             <AppCard class="stat-card">
@@ -45,8 +45,8 @@
                     <TrendingUp :size="20" />
                 </div>
 
-                <p>NYE LEADS</p>
-                <h2>{{ leads.length }}</h2>
+                <p>IGANGVÆRENDE LEADS</p>
+                <h2>{{ igangvaerende.length }}</h2>
             </AppCard>
         </div>
 
@@ -60,13 +60,13 @@
                     <button type="button"
                             :class="{ 'admin-tab-active': activeTab === 'partners' }"
                             @click="activeTab = 'partners'">
-                        Klar til kursus ({{ filteredPartners.length }})
+                        Klar til kursus ({{ filteredKlarTilKursus.length }})
                     </button>
 
                     <button type="button"
                             :class="{ 'admin-tab-active': activeTab === 'leads' }"
                             @click="activeTab = 'leads'">
-                        Igangværende ({{ filteredLeads.length }})
+                        Igangværende ({{ filteredIgangvaerende.length }})
                     </button>
                 </div>
             </div>
@@ -77,6 +77,7 @@
                        placeholder="Søg efter navn, virksomhed eller mail..." />
             </div>
 
+            <!-- KLAR TIL KURSUS: survey besvaret eller aktiveret. Fuld info + alle handlinger. -->
             <template v-if="activeTab === 'partners'">
                 <div class="table-header">
                     <span>Partner</span>
@@ -86,65 +87,76 @@
                 </div>
 
                 <div class="partner-row"
-                     v-for="partner in filteredPartners"
-                     :key="partner.id">
+                     v-for="person in filteredKlarTilKursus"
+                     :key="person.id">
                     <div class="partner-info">
-                        <strong>{{ partner.name }}</strong>
-                        <p>Mail: {{ partner.email }}</p>
-                        <p>Virksomhed: {{ partner.company }}</p>
+                        <strong>{{ person.name || person.email }}</strong>
+                        <p>Mail: {{ person.email }}</p>
+                        <p v-if="person.company">Virksomhed: {{ person.company }}</p>
 
-                        <small v-if="getAssignedCourseCount(partner.id) > 0">
-                            {{ getAssignedCourseCount(partner.id) }} kursus/kurser tildelt
+                        <small v-if="getAssignedCourseCount(person.id) > 0"
+                               class="assigned-count"
+                               @click="openAssignModal(person)">
+                            {{ getAssignedCourseCount(person.id) }} kursus/kurser tildelt · rediger
                         </small>
                     </div>
 
                     <span class="status"
-                          :class="partner.statusClass">
-                        {{ partner.status }}
+                          :class="person.statusClass">
+                        {{ person.status }}
                     </span>
 
                     <button class="survey-btn"
                             type="button"
-                            @click="openSurveyAnswers(partner)">
+                            @click="openSurveyAnswers(person)">
                         SE SVAR
                     </button>
 
-                    <button class="approve-btn"
-                            type="button"
-                            @click="openAssignModal(partner)">
-                        Tildel kurser
-                    </button>
+                    <div class="lead-action-buttons">
+                        <button v-if="person.statusClass === 'active' || person.statusClass === 'approved'"
+                                class="survey-btn"
+                                type="button"
+                                @click="openAssignModal(person)">
+                            Rediger kurser
+                        </button>
+
+                        <template v-else>
+                            <button class="survey-btn"
+                                    type="button"
+                                    @click="openAssignModal(person)">
+                                Tildel kurser
+                            </button>
+
+                            <button class="approve-btn"
+                                    type="button"
+                                    :disabled="getAssignedCourseCount(person.id) === 0"
+                                    @click="activateLeadAndSendCourses(person)">
+                                Aktiver kunde / send kurser
+                            </button>
+                        </template>
+                    </div>
                 </div>
 
-                <div v-if="filteredPartners.length === 0"
+                <div v-if="filteredKlarTilKursus.length === 0"
                      class="empty-state">
-                    Ingen partnere matcher din søgning.
+                    Ingen klar til kursus matcher din søgning.
                 </div>
             </template>
 
+            <!-- IGANGVÆRENDE: survey sendt, afventer svar. Minimal visning. -->
             <template v-if="activeTab === 'leads'">
                 <div class="table-header">
                     <span>Lead</span>
                     <span>Status</span>
                     <span>Survey</span>
-                    <span>Handlinger</span>
+                    <span>Handling</span>
                 </div>
 
                 <div class="partner-row"
-                     v-for="lead in filteredLeads"
+                     v-for="lead in filteredIgangvaerende"
                      :key="lead.id">
                     <div class="partner-info">
-                        <strong>{{ getLeadDisplayName(lead) }}</strong>
-
-                        <p>Mail: {{ lead.email }}</p>
-
-                        <p v-if="getLeadDisplayCompany(lead)">
-                            Virksomhed: {{ getLeadDisplayCompany(lead) }}
-                        </p>
-
-                        <small v-if="getAssignedCourseCount(lead.id) > 0">
-                            {{ getAssignedCourseCount(lead.id) }} kursus/kurser tildelt
-                        </small>
+                        <strong>{{ lead.email }}</strong>
                     </div>
 
                     <span class="status"
@@ -159,44 +171,18 @@
                         </div>
 
                         <small>{{ lead.surveyProgress }}% udfyldt</small>
-
-                        <button v-if="hasSurveyAnswers(lead)"
-                                class="survey-btn"
-                                type="button"
-                                @click="openSurveyAnswers(lead)">
-                            SE SVAR
-                        </button>
                     </div>
 
-                    <div class="lead-actions">
-                        <button v-if="!hasSurveyAnswers(lead)"
-                                class="approve-btn"
-                                type="button"
-                                @click="handleLeadAction(lead)">
-                            {{ lead.action }}
-                        </button>
-
-                        <div v-else
-                             class="lead-action-buttons">
-                            <button class="survey-btn"
-                                    type="button"
-                                    @click="openAssignModal(lead)">
-                                Tildel kurser
-                            </button>
-
-                            <button class="approve-btn"
-                                    type="button"
-                                    :disabled="getAssignedCourseCount(lead.id) === 0"
-                                    @click="activateLeadAndSendCourses(lead)">
-                                Aktiver kunde / send kurser
-                            </button>
-                        </div>
-                    </div>
+                    <button class="approve-btn"
+                            type="button"
+                            @click="handleLeadAction(lead)">
+                        {{ lead.action }}
+                    </button>
                 </div>
 
-                <div v-if="filteredLeads.length === 0"
+                <div v-if="filteredIgangvaerende.length === 0"
                      class="empty-state">
-                    Ingen leads matcher din søgning.
+                    Ingen leads i gang lige nu.
                 </div>
             </template>
         </div>
@@ -364,36 +350,45 @@
     const showSurveyModal = ref(false);
     const selectedSurveyPerson = ref(null);
 
-    const filteredPartners = computed(() => {
-        const search = searchQuery.value.toLowerCase().trim();
-
-        if (!search) return partners.value;
-
-        return partners.value.filter((partner) => {
-            return (
-                partner.name.toLowerCase().includes(search) ||
-                partner.company.toLowerCase().includes(search) ||
-                partner.email.toLowerCase().includes(search)
-            );
-        });
+    // Status-baseret opdeling. Matcher User.status enum på serveren:
+    //   pending_survey   -> Igangværende  (survey sendt, afventer svar)
+    //   pending_approval -> Klar til kursus (survey besvaret, klar til kursustildeling)
+    //   pending_activation / active -> Klar til kursus (sendt + aktiveret kunde)
+    const igangvaerende = computed(() => {
+        return leads.value.filter((lead) => !hasSurveyAnswers(lead));
     });
 
-    const filteredLeads = computed(() => {
+    const klarTilKursus = computed(() => {
+        const besvaredeLeads = leads.value.filter((lead) => hasSurveyAnswers(lead));
+        return [...besvaredeLeads, ...partners.value];
+    });
+
+    function matchesSearch(person, search) {
+        const name = (person.name || "").toLowerCase();
+        const company = (person.company || "").toLowerCase();
+        const email = (person.email || "").toLowerCase();
+
+        return (
+            name.includes(search) ||
+            company.includes(search) ||
+            email.includes(search)
+        );
+    }
+
+    const filteredIgangvaerende = computed(() => {
         const search = searchQuery.value.toLowerCase().trim();
 
-        if (!search) return leads.value;
+        if (!search) return igangvaerende.value;
 
-        return leads.value.filter((lead) => {
-            const name = lead.name || "";
-            const company = lead.company || "";
-            const email = lead.email || "";
+        return igangvaerende.value.filter((lead) => matchesSearch(lead, search));
+    });
 
-            return (
-                name.toLowerCase().includes(search) ||
-                company.toLowerCase().includes(search) ||
-                email.toLowerCase().includes(search)
-            );
-        });
+    const filteredKlarTilKursus = computed(() => {
+        const search = searchQuery.value.toLowerCase().trim();
+
+        if (!search) return klarTilKursus.value;
+
+        return klarTilKursus.value.filter((person) => matchesSearch(person, search));
     });
 
     const filteredCourses = computed(() => {
@@ -411,22 +406,6 @@
 
     function hasSurveyAnswers(lead) {
         return lead.hasSurveyAnswers || lead.surveyProgress === 100;
-    }
-
-    function getLeadDisplayName(lead) {
-        if (hasSurveyAnswers(lead) && lead.name) {
-            return lead.name;
-        }
-
-        return lead.email;
-    }
-
-    function getLeadDisplayCompany(lead) {
-        if (hasSurveyAnswers(lead) && lead.company) {
-            return lead.company;
-        }
-
-        return "";
     }
 
     function normalizeLead(lead) {
@@ -533,7 +512,20 @@
     }
 
     function handleLeadAction(lead) {
-<<<<<<< Updated upstream
+        // "Send survey" -> markér som sendt, vis Simuler svar herefter.
+        if (lead.action === "Send survey") {
+            lead.status = "Survey sendt";
+            lead.statusClass = "waiting";
+            lead.surveyProgress = 0;
+            lead.action = "Simuler svar";
+            lead.surveySent = true;
+
+            saveLeads();
+            return;
+        }
+
+        // "Simuler svar" -> simulér at kunden har udfyldt surveyen og
+        // ryk leadet over i "Klar til kursus" tab.
         if (lead.action === "Simuler svar") {
             const emailName = lead.email.split("@")[0];
             const emailDomain = lead.email.split("@")[1] || "ukendt.dk";
@@ -547,8 +539,9 @@
             lead.hasSurveyAnswers = true;
 
             saveLeads();
+
+            activeTab.value = "partners";
         }
-=======
         // Simulér at kunden har udfyldt surveyen og ryk leadet
         // over i "Klar til kursus" tab. Bruges kun til test.
         const emailName = lead.email.split("@")[0];
@@ -565,7 +558,7 @@
         saveLeads();
 
         activeTab.value = "partners";
->>>>>>> Stashed changes
+
     }
 
     function activateLeadAndSendCourses(lead) {
@@ -848,6 +841,14 @@
         color: #ff4d26;
         font-weight: 700;
     }
+
+    .assigned-count {
+        cursor: pointer;
+    }
+
+        .assigned-count:hover {
+            text-decoration: underline;
+        }
 
     .status {
         font-size: 12px;
