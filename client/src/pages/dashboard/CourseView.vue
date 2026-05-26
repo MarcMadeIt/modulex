@@ -23,59 +23,93 @@
           class="course-progress-fill"
           :style="{ width: progress + '%' }"
         ></div>
+        <!-- <ProgressBar :percentage="course.progress" /> -->
       </div>
 
       <div class="course-content">
         <div class="step-header">          
           <div class="step-type">
-            <PlayCircle v-if="currentStep.type === 'video'" :size="18" />
-            <FileText v-else-if="currentStep.type === 'pdf'" :size="18" />
-            <span>{{ currentStep.type }}</span>
+            <BookOpen :size="18" />
+            <span>Modul {{ currentIndex + 1 }}</span>
           </div>
 
           <h2>{{ currentStep.title }}</h2>
 
           <div v-if="currentStep.duration" class="step-duration">
-            ⏱ {{ currentStep.duration }}
+            ⏱ {{ formatDuration(currentStep.duration) }}
           </div>
 
           <p>
-            Gennemgå materialet herunder. Når du er klar, skal du bekræfte
-            nederst på siden for at gå videre.
+            {{
+              currentStep.description ||
+              "Gennemgå alle materialer herunder. Når du er klar, skal du bekræfte nederst på siden for at gå videre."
+            }}
           </p>
         </div>
 
-        <div class="content-box">
-          <template v-if="currentStep.type === 'video' && currentStep.url">
-            <iframe
-              class="course-video"
-              :src="currentStep.url"
-              title="Kursus video"
-              frameborder="0"
-              allowfullscreen
-            ></iframe>
-          </template>
+        <div class="materials-list">
+          <div
+            v-for="(material, materialIndex) in currentStep.materials"
+            :key="material.id || material._id || materialIndex"
+            class="material-section"
+          >
+            <div class="material-header">
+              <div class="material-type">
+                <PlayCircle v-if="material.type === 'video'" :size="18" />
+                <FileText v-else-if="material.type === 'pdf'" :size="18" />
+                <span>{{ material.type === "video" ? "Video" : "PDF" }}</span>
+              </div>
 
-          <template v-else-if="currentStep.type === 'pdf'">
-            <div class="content-placeholder-icon">📄</div>
+              <h3>{{ material.title }}</h3>
 
-            <p>{{ currentStep.title }}</p>
+              <small v-if="material.duration || material.size">
+                {{ formatDuration(material.duration) || material.size }}
+              </small>
+            </div>
 
-            <!-- ÆNDRING: PDF-link bruger først fileUrl og falder tilbage til url. -->
-            <a
-              :href="currentStep.fileUrl || currentStep.url"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="pdf-link"
+            <div
+              class="content-box"
+              :class="{
+                'content-box-pdf': material.type === 'pdf' && material.fileUrl,
+              }"
             >
-              Åbn PDF
-            </a>
-          </template>
+              <template v-if="material.type === 'video' && material.url">
+                <iframe
+                  class="course-video"
+                  :src="material.url"
+                  :title="material.title"
+                  frameborder="0"
+                  allowfullscreen
+                ></iframe>
+              </template>
 
-          <template v-else>
-            <div class="content-placeholder-icon">▤</div>
-            <p>{{ currentStep.title }}</p>
-          </template>
+              <template
+                v-else-if="
+                  material.type === 'pdf' && (material.fileUrl || material.url)
+                "
+              >
+                <iframe
+                  class="course-pdf"
+                  :src="material.fileUrl || material.url"
+                  :title="material.title"
+                ></iframe>
+
+                <a
+                  :href="material.fileUrl || material.url"
+                  target="_blank"
+                  class="pdf-link"
+                >
+                  Åbn PDF i ny fane
+                </a>
+              </template>
+
+              <template v-else>
+                <div class="content-placeholder-icon">▤</div>
+                <p>{{ material.title }}</p>
+                <small>Materiale mangler eller link er ikke sat</small>
+              </template>
+            </div>
+          </div>
         </div>
 
         <label class="confirm-box" :class="{ 'confirm-box-active': confirmed }">
@@ -124,10 +158,15 @@
 import { ref, computed, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 import {
-  getCourseById,
-  completeCourse,
-} from "../../data/dummyCourseService.js";
+  PlayCircle,
+  FileText,
+  ArrowLeft,
+  ArrowRight,
+  BookOpen,
+} from "lucide-vue-next";
 
 
 import { PlayCircle, FileText, ArrowLeft, ArrowRight } from "lucide-vue-next";
@@ -151,81 +190,169 @@ const isLastStep = computed(() => {
 });
 
 const progress = computed(() => {
-  if (!course.value) return 0;
-
-  return ((currentIndex.value + 1) / course.value.items.length) * 100;
+  return course.value?.progress?.percentage ?? 0;
 });
 
 onMounted(() => {
+  loadCourse();
+});
+
+async function loadCourse() {
   const id = route.params.id;
 
-  const foundCourse = getCourseById(id);
+  loading.value = true;
+
+  try {
+    const courseResponse = await fetch(`${API_URL}/courses/${id}`, {
+      credentials: "include",
+    });
+
+    if (!courseResponse.ok) {
+      throw new Error(`Kunne ikke hente kursus: HTTP ${courseResponse.status}`);
+    }
+
+    const courseData = await courseResponse.json();
+
+    const modulesResponse = await fetch(`${API_URL}/courses/${id}/modules`, {
+      credentials: "include",
+    });
+
+    if (!modulesResponse.ok) {
+      throw new Error(
+        `Kunne ikke hente moduler: HTTP ${modulesResponse.status}`,
+      );
+    }
+
+    const modulesData = await modulesResponse.json();
+
+    console.log("COURSE FROM API:", courseData);
+    console.log("MODULES FROM API:", modulesData);
+    const apiCourse = courseData.course || courseData;
+    const apiModules = modulesData.modules || modulesData;
+
+    const modulesWithMaterials = await Promise.all(
+      apiModules.map(async (module) => {
+        const moduleId = module._id || module.id;
+
+        const moduleResponse = await fetch(
+          `${API_URL}/courses/${id}/modules/${moduleId}`,
+          {
+            credentials: "include",
+          },
+        );
+
+        if (!moduleResponse.ok) {
+          console.warn("Kunne ikke hente module details:", moduleId);
+          return module;
+        }
+
+        const moduleData = await moduleResponse.json();
+
+        return moduleData.module || moduleData;
+      }),
+    );
 
   // console.log er fjernet.
   if (!foundCourse) {
     course.value = {
+      id: apiCourse._id || apiCourse.id,
+      title: apiCourse.title,
+      description: apiCourse.description,
+      progress: courseData.progress,
+      items: modulesWithMaterials
+        .slice()
+        .sort((a, b) => (a.order || 0) - (b.order || 0))
+        .map(mapModuleForFrontend),
+    };
+
+    const completedCount = courseData.progress?.completed ?? 0;
+
+    if (course.value.items.length > 0) {
+      currentIndex.value = Math.min(
+        completedCount,
+        course.value.items.length - 1,
+      );
+    }
+  } catch (error) {
+    console.error("CourseView fejl:", error);
+
+    course.value = {
       id,
-      title: "Demo Course",
-      items: [
-        { title: "Intro", type: "video" },
-        { title: "PDF Guide", type: "pdf" },
-        { title: "Quiz", type: "quiz" },
-      ],
+      title: "Kurset kunne ikke indlæses",
+      items: [],
     };
-
+  } finally {
     loading.value = false;
-    return;
   }
+}
 
-  course.value = {
-    id: foundCourse.id,
-    title: foundCourse.title,
-
-    // Der er både url og fileUrl, så PDF'er virker uanset datakilde.
-    items: foundCourse.modules.flatMap((module) => {
-  return (module.materials || []).map((material) => {
-    return {
-      title: module.title,
-      description: module.description,
-      type: material.type,
-      url: material.url,
-      fileUrl: material.fileUrl,
-      duration: material.duration,
-    };
-  });
-}),
+function mapModuleForFrontend(module) {
+  console.log("MODULE FROM API:", module);
+  console.log("MATERIALS FROM API:", module.materials);
+  return {
+    id: module._id || module.id,
+    title: module.title,
+    description: module.description || "",
+    duration: module.duration || "",
+    order: module.order || 0,
+    materials: module.materials || module.contents || [],
   };
+}
 
-  if (course.value.items.length === 0) {
-    course.value.items = [
-      {
-        title: foundCourse.title,
-        type: "intro",
+async function nextStep() {
+  if (!confirmed.value || !currentStep.value) return;
+
+  try {
+    const result = await markCurrentModuleCompleted();
+
+    if (result?.progress) {
+      course.value.progress = result.progress;
+    }
+
+    if (isLastStep.value) {
+      router.push("/dashboard");
+      return;
+    }
+
+    currentIndex.value++;
+    confirmed.value = false;
+  } catch (error) {
+    console.error("Kunne ikke gemme progress:", error);
+    alert("Kunne ikke gemme din progress. Prøv igen.");
+  }
+}
+
+async function markCurrentModuleCompleted() {
+  const response = await fetch(
+    `${API_URL}/courses/${course.value.id}/modules/${currentStep.value.id}/complete`,
+    {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
       },
-    ];
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(`Kunne ikke gemme progress: HTTP ${response.status}`);
   }
 
-  loading.value = false;
-});
+  return await response.json();
+}
 
-function nextStep() {
-  if (!confirmed.value) return;
+function formatDuration(duration) {
+  if (!duration) return "";
 
-  if (isLastStep.value) {
-    completeCourse(course.value.id);
+  const text = String(duration);
 
-    router.push("/dashboard");
-    return;
-  }
-
-  currentIndex.value++;
-  confirmed.value = false;
+  return text.includes("min") ? text : `${text} min`;
 }
 
 function prevStep() {
   if (currentIndex.value > 0) {
     currentIndex.value--;
-    confirmed.value = true;
+    confirmed.value = false;
   }
 }
 
@@ -317,7 +444,7 @@ function exitCourse() {
   color: var(--color-primary-medium);
 }
 
-.content-box {
+/* .content-box {
   aspect-ratio: 16 / 9;
   background: var(--color-primary-ultralight);
   border: 1px dashed var(--color-border);
@@ -331,6 +458,80 @@ function exitCourse() {
   color: var(--color-muted);
   font-weight: 800;
   overflow: hidden;
+} */
+
+.materials-list {
+  display: grid;
+  gap: var(--space-6);
+  margin-bottom: var(--space-6);
+}
+
+.material-section {
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-paper);
+  overflow: hidden;
+}
+
+.material-header {
+  padding: 1.2rem 1.4rem;
+  border-bottom: 1px solid var(--color-border-light);
+  display: grid;
+  gap: 0.4rem;
+}
+
+.material-type {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--color-primary-orange);
+  font-size: var(--text-xs);
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.material-header h3 {
+  margin: 0;
+  font-size: var(--text-md);
+  font-weight: 900;
+  color: var(--color-text-primary);
+}
+
+.material-header small {
+  color: var(--color-text-secondary);
+  font-weight: 800;
+}
+
+.content-box {
+  aspect-ratio: 16 / 9;
+  background: var(--color-primary-ultralight);
+  border: none;
+  border-radius: 0;
+  margin-bottom: 0;
+}
+
+.content-box-pdf {
+  display: block;
+  padding: 0;
+  aspect-ratio: auto;
+  min-height: 520px;
+  background: var(--color-bg-paper);
+}
+
+.course-pdf {
+  width: 100%;
+  height: 520px;
+  border: none;
+  display: block;
+}
+
+.pdf-link {
+  display: inline-flex;
+  margin: 0.8rem 1rem 1rem;
+  color: var(--color-primary-orange);
+  font-weight: 900;
+  text-decoration: none;
 }
 
 .course-video {
@@ -425,7 +626,6 @@ function exitCourse() {
   opacity: 0.3;
   cursor: not-allowed;
 }
-
 .course-nav-back {
   background: transparent;
   color: var(--color-primary-medium);

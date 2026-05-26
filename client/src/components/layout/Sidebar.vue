@@ -5,18 +5,12 @@
     </div>
 
     <nav class="sidebar-nav">
-      <!--
-        exact-active-class i stedet for active-class: ellers ville fx
-        "/dashboard/admin" highlighte når man er på "/dashboard/admin/courses"
-        fordi RouterLink default'er til prefix-match.
-      -->
       <RouterLink
         v-for="item in navItems"
         :key="item.path"
         :to="item.path"
         class="sidebar-link"
-        active-class=""
-        exact-active-class="sidebar-link-active"
+        active-class="sidebar-link-active"
       >
         <span>{{ item.label }}</span>
         <span>›</span>
