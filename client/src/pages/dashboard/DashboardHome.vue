@@ -100,10 +100,12 @@
           </p>
           <div class="course-card-meta">
             <span>{{ course.moduleCount }} moduler</span>
-            <span class="meta-dot">•</span>
-            <span>{{ course.totalDuration || 0 }} min</span>
-          </div>
 
+            <template v-if="course.totalDuration > 0">
+              <span class="meta-dot">•</span>
+              <span>{{ course.totalDuration }} min</span>
+            </template>
+          </div>
           <div class="card-actions">
             <AppButton variant="text" arrow>
               {{
