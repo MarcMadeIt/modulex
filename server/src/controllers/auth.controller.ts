@@ -108,6 +108,9 @@ export const login = async (req: Request, res: Response) => {
       user: {
         id: user._id,
         email: user.email,
+        companyName: user.companyName,
+        contactPerson: user.contactPerson,
+        phone: user.phone,
         role: user.role,
         status: user.status,
       },
@@ -121,10 +124,28 @@ export const login = async (req: Request, res: Response) => {
 };
 
 export const getMe = async (req: AuthRequest, res: Response) => {
-  res.json({
-    message: "Protected route accessed successfully",
-    user: req.user,
-  });
+  try {
+    const user = await User.findById(req.user!.userId).select("-password");
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    return res.json({
+      message: "Protected route accessed successfully",
+      user: {
+        id: user._id,
+        email: user.email,
+        companyName: user.companyName,
+        contactPerson: user.contactPerson,
+        phone: user.phone,
+        role: user.role,
+        status: user.status,
+      },
+    });
+  } catch (err) {
+    console.error("getMe error:", err);
+    return res.status(500).json({ message: "Failed to load user" });
+  }
 };
 
 export const logout = async (req: Request, res: Response) => {

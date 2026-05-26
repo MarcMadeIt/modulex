@@ -168,9 +168,6 @@ import {
   BookOpen,
 } from "lucide-vue-next";
 
-
-import { PlayCircle, FileText, ArrowLeft, ArrowRight } from "lucide-vue-next";
-
 const route = useRoute();
 const router = useRouter();
 
@@ -252,8 +249,6 @@ async function loadCourse() {
       }),
     );
 
-  // console.log er fjernet.
-  if (!foundCourse) {
     course.value = {
       id: apiCourse._id || apiCourse.id,
       title: apiCourse.title,
@@ -316,10 +311,18 @@ async function nextStep() {
 
     currentIndex.value++;
     confirmed.value = false;
+    scrollToTop();
   } catch (error) {
     console.error("Kunne ikke gemme progress:", error);
     alert("Kunne ikke gemme din progress. Prøv igen.");
   }
+}
+
+// Når man skifter modul ruller vi tilbage til toppen så det nye trin
+// starter et tydeligt sted i stedet for midt på siden hvor det forrige
+// trin sluttede.
+function scrollToTop() {
+  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 async function markCurrentModuleCompleted() {
@@ -353,6 +356,7 @@ function prevStep() {
   if (currentIndex.value > 0) {
     currentIndex.value--;
     confirmed.value = false;
+    scrollToTop();
   }
 }
 

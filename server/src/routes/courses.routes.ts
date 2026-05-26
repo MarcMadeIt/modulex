@@ -5,6 +5,7 @@ import {
   getCourse,
   getCourseModules,
   getCourseModule,
+  completeCourseModule,
 } from "../controllers/courses.controller";
 
 const router: Router = Router();
@@ -191,5 +192,50 @@ router.get("/:id/modules", getCourseModules);
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.get("/:id/modules/:moduleId", getCourseModule);
+
+/**
+ * @swagger
+ * /courses/{id}/modules/{moduleId}/complete:
+ *   post:
+ *     summary: Mark a module as completed for the authenticated user
+ *     tags: [Courses]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Course ID
+ *       - in: path
+ *         name: moduleId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Module ID
+ *     responses:
+ *       200:
+ *         description: Module marked as completed (idempotent)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 progress:
+ *                   type: object
+ *                   properties:
+ *                     completed:
+ *                       type: integer
+ *                     total:
+ *                       type: integer
+ *                     percentage:
+ *                       type: integer
+ *       403:
+ *         description: User does not have access to this course
+ *       404:
+ *         description: Course or module not found
+ */
+router.post("/:id/modules/:moduleId/complete", completeCourseModule);
 
 export default router;

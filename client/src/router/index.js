@@ -24,29 +24,30 @@ const routes = [
     component: DashboardLayout,
     meta: { requiresAuth: true },
     children: [
-      // Klient-område. Admin der lander her bliver sendt videre til
-      // /dashboard/admin af guarden nedenfor.
+      // Klient-område. Admin må også åbne det (fx via "Skift til admin"-knappen
+      // i headeren der peger den anden vej, eller direkte besøg). Client kan
+      // dog ikke gå den anden vej til /dashboard/admin — det blokerer guarden.
       {
         path: "",
         name: "DashboardHome",
-        meta: { roles: ["client"] },
+        meta: { roles: ["client", "admin"] },
         component: () => import("../pages/dashboard/DashboardHome.vue"),
       },
       {
         path: "courses",
         name: "Courses",
-        meta: { roles: ["client"] },
+        meta: { roles: ["client", "admin"] },
         component: () => import("../pages/dashboard/DashboardHome.vue"),
       },
       {
         path: "course/:id",
         name: "CourseView",
-        meta: { roles: ["client"] },
+        meta: { roles: ["client", "admin"] },
         component: () => import("../pages/dashboard/CourseView.vue"),
         props: true,
       },
 
-      // Admin-område. Client der lander her bliver sendt videre til /dashboard.
+      // Admin-only område. Client der lander her bliver bouncet til /dashboard.
       {
         path: "admin",
         name: "Admin",

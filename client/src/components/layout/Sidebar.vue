@@ -1,9 +1,6 @@
 ﻿<template>
   <aside class="sidebar">
-    <div class="sidebar-logo">
-      module<span style="color: var(--color-primary-orange)">x</span>
-    </div>
-
+    <!-- Logo er flyttet op i Header.vue — sidebar kun til navigation. -->
     <nav class="sidebar-nav">
       <RouterLink
         v-for="item in navItems"
@@ -16,24 +13,16 @@
         <span>›</span>
       </RouterLink>
     </nav>
-
-        <div class="sidebar-footer">
-            <button type="button" class="sidebar-link" @click="handleLogout">
-                <span>Log ud</span>
-            </button>
-        </div>
-    </aside>
+  </aside>
 </template>
 
 <script setup>
 import { computed } from "vue";
-import { useRouter } from "vue-router";
 import { auth } from "../../stores/auth";
-
-const router = useRouter();
 
 // Adskiller admin- og client-navigation. Admin har sit eget /dashboard/admin
 // område med tilhørende sub-routes; client har /dashboard.
+// Log ud-knappen er flyttet op i Header.vue så den findes ét sted.
 const navItems = computed(() => {
     if (auth.role === "admin") {
         return [
@@ -49,9 +38,4 @@ const navItems = computed(() => {
         { label: "Indstillinger", path: "/settings" },
     ];
 });
-
-const handleLogout = async () => {
-    await auth.logout();
-    router.push("/login");
-};
 </script>

@@ -205,19 +205,10 @@ async function loadDashboard() {
       throw new Error("API returnerede ikke en gyldig kursusliste.");
     }
 
-    // courses.value = mapApiCoursesForFrontend(apiCourses);
-    const mappedCourses = mapApiCoursesForFrontend(apiCourses);
-
-    courses.value = await Promise.all(
-      mappedCourses.map(async (course) => {
-        const totalDuration = await getCourseTotalDuration(course.id);
-
-        return {
-          ...course,
-          totalDuration,
-        };
-      }),
-    );
+    // totalDuration kommer nu med direkte fra /courses-endpointet
+    // (aggregeret fra materials.expectedDuration på server-siden), så vi
+    // behøver ikke længere et N+1 fetch til /courses/:id/modules pr. kursus.
+    courses.value = mapApiCoursesForFrontend(apiCourses);
   } catch (error) {
     console.error("Dashboard fejl:", error);
 
@@ -263,41 +254,6 @@ function mapApiCoursesForFrontend(apiCourses) {
       const minutes = parseInt(module.duration) || 0;
       return total + minutes;
     }, 0);
-  }
-}
-
-async function getCourseTotalDuration(courseId) {
-  try {
-    const response = await fetch(`${API_URL}/courses/${courseId}/modules`, {
-      credentials: "include",
-    });
-
-    if (!response.ok) {
-      console.warn(`Kunne ikke hente moduler for course ${courseId}`);
-      return 0;
-    }
-
-    const data = await response.json();
-    const modules = data.modules || data || [];
-
-    console.log(`MODULES FOR COURSE ${courseId}:`, modules);
-
-    const totalDuration = modules.reduce((total, module) => {
-      console.log("MODULE DURATION:", {
-        title: module.title,
-        duration: module.duration,
-        fullModule: module,
-      });
-
-      return total + (parseInt(module.duration) || 0);
-    }, 0);
-
-    console.log(`TOTAL DURATION FOR COURSE ${courseId}:`, totalDuration);
-
-    return totalDuration;
-  } catch (error) {
-    console.error("Kunne ikke beregne total duration:", error);
-    return 0;
   }
 }
 
