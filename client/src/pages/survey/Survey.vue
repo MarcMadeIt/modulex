@@ -103,7 +103,7 @@
           </div>
 
           <div class="survey-footer">
-            <img src="/Modulex_Logo_Full_Colur.jpg" alt="moduleX" class="survey-footer-logo" />
+            <img src="/Modulex_Logo_Full_Colour.jpg" alt="moduleX" class="survey-footer-logo" />
           </div>
         </div>
 
@@ -144,7 +144,7 @@
           </div>
 
           <div class="survey-footer">
-            <img src="/Modulex_Logo_Full_Colur.jpg" alt="moduleX" class="survey-footer-logo" />
+            <img src="/Modulex_Logo_Full_Colour.jpg" alt="moduleX" class="survey-footer-logo" />
           </div>
         </div>
       </div>
