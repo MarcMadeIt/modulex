@@ -107,6 +107,26 @@
                 </a>
               </template>
 
+              <template
+                v-else-if="
+                  material.type === 'pdf' && (material.fileUrl || material.url)
+                "
+              >
+                <iframe
+                  class="course-pdf"
+                  :src="material.fileUrl || material.url"
+                  :title="material.title"
+                ></iframe>
+
+                <a
+                  :href="material.fileUrl || material.url"
+                  target="_blank"
+                  class="pdf-link"
+                >
+                  Åbn PDF i ny fane
+                </a>
+              </template>
+
               <template v-else-if="isVideoMaterial(material) && material.url">
                 <div class="content-placeholder-icon">⚠</div>
                 <p>{{ material.title }}</p>
@@ -233,11 +253,12 @@ onMounted(() => {
 });
 
 async function loadCourse() {
-  const id = route.params.id;
+  const id = route.params.id; //Henter kursus-id fra URL
 
   loading.value = true;
 
   try {
+    // Henter først selve kurset og brugerens progress for kurset
     const courseResponse = await fetch(`${API_URL}/courses/${id}`, {
       credentials: "include",
     });
@@ -248,6 +269,8 @@ async function loadCourse() {
 
     const courseData = await courseResponse.json();
 
+    // Henter listen af moduler for kurset.
+    // Dette endpoint indeholder kun modul-summary, så vi henter detaljer bagefter.
     const modulesResponse = await fetch(`${API_URL}/courses/${id}/modules`, {
       credentials: "include",
     });
@@ -263,6 +286,8 @@ async function loadCourse() {
     const apiCourse = courseData.course || courseData;
     const apiModules = modulesData.modules || modulesData;
 
+    // Henter hvert modul enkeltvis, så vi får alle materials med
+    // fx video, PDF eller tekst-materialer.
     const modulesWithMaterials = await Promise.all(
       apiModules.map(async (module) => {
         const moduleId = module._id || module.id;
@@ -280,11 +305,11 @@ async function loadCourse() {
         }
 
         const moduleData = await moduleResponse.json();
-
         return moduleData.module || moduleData;
       }),
     );
 
+    // Samler API-data i det format, som template-delen bruger.
     course.value = {
       id: apiCourse._id || apiCourse.id,
       title: apiCourse.title,
@@ -296,8 +321,11 @@ async function loadCourse() {
         .map(mapModuleForFrontend),
     };
 
+    // API'et returnerer hvor mange moduler brugeren allerede har gennemført.
+    // Vi bruger det til at åbne på næste ikke-gennemførte modul.
     const completedCount = courseData.progress?.completed ?? 0;
-
+    // Review mode bruges, når et gennemført kursus åbnes via "Gense".
+    // Her starter vi fra første modul og checkboxen er allerede markeret.
     if (course.value.items.length > 0) {
       if (isReviewMode.value) {
         currentIndex.value = 0;
@@ -351,25 +379,38 @@ function getYoutubeEmbedUrl(url) {
 
   return videoId ? `https://www.youtube.com/embed/${videoId}` : "";
 }
+function mapMaterialForFrontend(material) {
+  return {
+    ...material,
+    id: material.contentId,
+    duration: material.expectedDuration ?? "",
+  };
+}
+
+function getModuleDurationFromMaterials(materials) {
+  return materials.reduce((total, material) => {
+    return total + (Number(material.duration) || 0);
+  }, 0);
+}
 
 function mapModuleForFrontend(module) {
-  console.log("MODULE FROM API:", module);
-  console.log("MODULE DURATION:", {
-    title: module.title,
-    duration: module.duration,
-    expectedDuration: module.expectedDuration,
-    fullModule: module,
-  });
+  const materials = module.materials || module.contents || [];
+  const mappedMaterials = materials.map(mapMaterialForFrontend);
+  const calculatedDuration = getModuleDurationFromMaterials(mappedMaterials);
+
   return {
     id: module._id || module.id,
     title: module.title,
     description: module.description || "",
-    duration: module.duration || "",
+    duration:
+      module.duration ?? module.expectedDuration ?? calculatedDuration ?? "",
     order: module.order || 0,
-    materials: module.materials || module.contents || [],
+    materials: mappedMaterials,
   };
 }
 
+// Går videre til næste modul.
+// I review mode gemmer vi ikke progress igen, fordi kurset allerede er gennemført.
 async function nextStep() {
   if (!confirmed.value || !currentStep.value) return;
 
@@ -413,6 +454,8 @@ function scrollToTop() {
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
+// Går videre til næste modul.
+// I review mode gemmer vi ikke progress igen, fordi kurset allerede er gennemført.
 async function markCurrentModuleCompleted() {
   const response = await fetch(
     `${API_URL}/courses/${course.value.id}/modules/${currentStep.value.id}/complete`,
@@ -432,14 +475,15 @@ async function markCurrentModuleCompleted() {
   return await response.json();
 }
 
+// Sikrer at duration vises ens, fx "5" bliver til "5 min".
 function formatDuration(duration) {
   if (!duration) return "";
-
   const text = String(duration);
-
   return text.includes("min") ? text : `${text} min`;
 }
 
+// Går tilbage til forrige modul.
+// I review mode forbliver checkboxen markeret.
 function prevStep() {
   if (currentIndex.value > 0) {
     currentIndex.value--;

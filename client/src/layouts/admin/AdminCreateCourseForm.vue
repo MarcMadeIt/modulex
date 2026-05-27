@@ -262,6 +262,7 @@ function buildPayload() {
         title: module.title.trim(),
         description: "",
         order: moduleIndex + 1,
+        duration: expectedDuration,
         materials: module.materials.map((material) => {
           // contentId sendes med når materialet kommer fra biblioteket.
           // Backend bruger den til at hente title/url live fra Content
@@ -348,19 +349,23 @@ onMounted(() => {
           <h2 class="form-section-title">Kursus info</h2>
 
           <div class="form-group">
+            <label class="input-label">Kursus titel <span class="required">*</span></label>
             <input
               v-model="courseTitle"
               class="input"
               type="text"
               placeholder="Kursus titel"
+              required
             />
           </div>
 
           <div class="form-group">
+            <label class="input-label">Beskrivelse <span class="required">*</span></label>
             <textarea
               v-model="courseDescription"
               class="input textarea"
               placeholder="Kort beskrivelse af kurset..."
+              required
             ></textarea>
           </div>
         </section>
@@ -419,22 +424,24 @@ onMounted(() => {
 
             <div class="form-grid">
               <div class="form-group">
-                <label class="input-label">Titel på modul</label>
+                <label class="input-label">Titel på modul <span class="required">*</span></label>
                 <input
                   v-model="module.title"
                   class="input"
                   type="text"
                   placeholder="F.eks. Velkommen til Modulex"
+                  required
                 />
               </div>
 
               <div class="form-group">
-                <label class="input-label">Varighed</label>
+                <label class="input-label">Varighed <span class="required">*</span></label>
                 <input
                   v-model="module.duration"
                   class="input"
                   type="text"
                   placeholder="F.eks. 12 min"
+                  required
                 />
               </div>
             </div>
@@ -442,7 +449,7 @@ onMounted(() => {
             <div class="material-section">
               <div class="material-section-header">
                 <div>
-                  <h3>Materialer</h3>
+                  <h3>Materialer<span class="required"> *</span></h3>
                   <p>Vælg fra bibliotek eller tilføj manuelt.</p>
                 </div>
 
@@ -599,13 +606,14 @@ onMounted(() => {
                 </div>
 
                 <div class="form-group">
-                  <label class="input-label">Titel på materiale</label>
+                  <label class="input-label">Titel på materiale <span class="required">*</span></label>
                   <input
                     v-model="material.title"
                     class="input"
                     type="text"
                     :disabled="material.source === 'library'"
                     placeholder="F.eks. Introduktionsvideo"
+                    required
                   />
                 </div>
 
@@ -616,12 +624,13 @@ onMounted(() => {
 
                 <template v-else>
                   <div v-if="material.type === 'video'" class="form-group">
-                    <label class="input-label">YouTube-link</label>
+                    <label class="input-label">YouTube-link <span class="required">*</span></label>
                     <input
                       v-model="material.youtubeUrl"
                       class="input"
                       type="url"
                       placeholder="Indsæt YouTube-link her..."
+                      required
                     />
 
                     <div
@@ -644,7 +653,7 @@ onMounted(() => {
                   </div>
 
                   <div v-if="material.type === 'pdf'" class="form-group">
-                    <label class="input-label">PDF-fil</label>
+                    <label class="input-label">PDF-fil <span class="required">*</span></label>
 
                     <label class="upload-placeholder">
                       <span class="upload-icon">↑</span>
@@ -667,6 +676,7 @@ onMounted(() => {
                         type="file"
                         accept="application/pdf"
                         hidden
+                        required
                         @change="handleFileUpload($event, material)"
                       />
                     </label>
@@ -1080,5 +1090,16 @@ onMounted(() => {
   .material-section-header {
     align-items: flex-start;
   }
+}
+
+.required {
+  color: var(--color-primary-orange);
+  font-weight: 800;
+  font-size: 1.5em;
+}
+
+.input-label{
+  color: var(--color-text-primary);
+  font-weight:800;
 }
 </style>

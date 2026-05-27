@@ -17,6 +17,7 @@ export interface IModule extends Document {
   title: string;
   description?: string;
   order: number;
+  duration?: number; // in minutes — module-level fallback when materials have no expectedDuration
   materials: IMaterial[];
 }
 
@@ -38,6 +39,7 @@ const moduleSchema = new Schema<IModule>(
     title: { type: String, required: true, trim: true },
     description: { type: String, trim: true },
     order: { type: Number, required: true },
+    duration: { type: Number }, // in minutes
     materials: [materialSchema],
   },
   { timestamps: true },
