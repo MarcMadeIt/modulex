@@ -595,7 +595,7 @@
         .receiver-dropdown input {
             width: 100%;
             border: 1px solid #eee;
-            background: #fafafa;
+            background: var(--color-input-bg);
             border-radius: 10px;
             padding: 12px 14px;
             margin-bottom: 12px;
@@ -699,7 +699,7 @@
             width: 420px;
             max-width: 100%;
             border: none;
-            background: #f8f8f8;
+            background: var(--color-input-bg);
             border-radius: 12px;
             padding: 14px 18px;
         }

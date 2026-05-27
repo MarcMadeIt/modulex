@@ -315,6 +315,7 @@ function closeModal() {
             border: 1px solid #222;
             border-radius: 12px;
             padding: 12px 14px;
+            background: var(--color-input-bg);
         }
 
     .receiver-list {

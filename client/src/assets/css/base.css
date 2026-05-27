@@ -43,3 +43,9 @@ button,
 input {
     font-family: inherit;
 }
+
+input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+textarea,
+select {
+    background-color: var(--color-input-bg);
+}

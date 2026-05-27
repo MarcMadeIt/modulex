@@ -463,7 +463,7 @@ async function handleContactSubmit() {
   border-radius: var(--radius-md);
   padding: 1rem 1.25rem;
   font-size: var(--text-sm);
-  background-color: var(--color-primary-ultralight);
+  background-color: var(--color-input-bg);
   color: var(--color-text-primary);
   transition: 0.2s ease;
 }
@@ -480,14 +480,14 @@ async function handleContactSubmit() {
 }
 
 .input-locked {
-  background-color: var(--color-primary-ultralight);
+  background-color: var(--color-input-bg-locked);
   color: var(--color-text-secondary);
   cursor: not-allowed;
 }
 
 .input-locked:focus {
   border-color: var(--color-border-light);
-  background-color: var(--color-primary-ultralight);
+  background-color: var(--color-input-bg-locked);
 }
 
 .input-hint {

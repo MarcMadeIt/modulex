@@ -477,7 +477,7 @@ function saveCourse() {
     .input {
         width: 100%;
         border: none;
-        background: #fafafa;
+        background: var(--color-input-bg);
         border-radius: 14px;
         padding: 16px 18px;
         margin-bottom: 14px;
