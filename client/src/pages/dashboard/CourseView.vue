@@ -69,11 +69,14 @@
             <div
               class="content-box"
               :class="{
-                'content-box-pdf': material.type === 'pdf' && (material.fileUrl || material.url),
+                'content-box-pdf':
+                  material.type === 'pdf' && (material.fileUrl || material.url),
               }"
             >
               <template
-                v-if="isVideoMaterial(material) && getYoutubeEmbedUrl(material.url)"
+                v-if="
+                  isVideoMaterial(material) && getYoutubeEmbedUrl(material.url)
+                "
               >
                 <iframe
                   class="course-video"
@@ -108,7 +111,7 @@
                 <div class="content-placeholder-icon">⚠</div>
                 <p>{{ material.title }}</p>
                 <small>
-                  Linket er ikke et gyldigt YouTube-video-link.<br>
+                  Linket er ikke et gyldigt YouTube-video-link.<br />
                   <a :href="material.url" target="_blank">Åbn link i ny fane</a>
                 </small>
               </template>
@@ -122,9 +125,22 @@
           </div>
         </div>
 
-        <label class="confirm-box" :class="{ 'confirm-box-active': confirmed }">
-          <input type="checkbox" v-model="confirmed" />
-          <span>Jeg bekræfter at have set indholdet</span>
+        <label
+          class="confirm-box"
+          :class="{
+            'confirm-box-active': confirmed,
+            'confirm-box-readonly': isReviewMode,
+          }"
+        >
+          <input type="checkbox" v-model="confirmed" :disabled="isReviewMode" />
+
+          <span>
+            {{
+              isReviewMode
+                ? "Modulet er allerede gennemført"
+                : "Jeg bekræfter at have set indholdet"
+            }}
+          </span>
         </label>
 
         <div class="course-nav">
@@ -143,7 +159,15 @@
             :disabled="!confirmed"
           >
             <span>
-              {{ isLastStep ? "Afslut kursus" : "Næste trin" }}
+              {{
+                isReviewMode
+                  ? isLastStep
+                    ? "Tilbage til dashboard"
+                    : "Næste modul"
+                  : isLastStep
+                    ? "Afslut kursus"
+                    : "Næste trin"
+              }}
               <ArrowRight :size="18" />
             </span>
           </button>
@@ -640,6 +664,15 @@ function exitCourse() {
 
 .confirm-box-active input {
   accent-color: var(--color-success);
+}
+
+.confirm-box-readonly {
+  cursor: default;
+  opacity: 0.85;
+}
+
+.confirm-box-readonly input {
+  cursor: default;
 }
 
 .course-nav {

@@ -105,24 +105,28 @@
           <p class="card-text">
             {{ course.description }}
           </p>
-          <div class="course-card-meta">
-            <span>{{ course.moduleCount }} moduler</span>
 
-            <template v-if="course.totalDuration > 0">
-              <span class="meta-dot">•</span>
-              <span>{{ course.totalDuration }} min</span>
-            </template>
-          </div>
-          <div class="card-actions">
-            <AppButton variant="text" arrow>
-              {{
-                course.completed
-                  ? "Gense"
-                  : course.progress > 0
-                    ? "Fortsæt"
-                    : "Start"
-              }}
-            </AppButton>
+          <div class="course-card-footer">
+            <div class="course-card-meta">
+              <span>{{ course.moduleCount }} moduler</span>
+
+              <template v-if="course.totalDuration > 0">
+                <span class="meta-dot">•</span>
+                <span>{{ course.totalDuration }} min</span>
+              </template>
+            </div>
+
+            <div class="course-card-action-wrap">
+              <AppButton class="course-card-action" variant="text" arrow>
+                {{
+                  course.completed
+                    ? "Gense"
+                    : course.progress > 0
+                      ? "Fortsæt"
+                      : "Start"
+                }}
+              </AppButton>
+            </div>
           </div>
         </AppCard>
       </div>
@@ -289,9 +293,31 @@ function goToFirstCourse() {
 </script>
 
 <style scoped>
+@media (max-width: 640px) {
+  .course-section-header {
+    gap: var(--space-4);
+  }
+
+  .course-filters {
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    gap: var(--space-2);
+  }
+
+  .filter-button {
+    flex: 1;
+    padding: 0.85rem 0.75rem;
+    font-size: var(--text-sm);
+    white-space: nowrap;
+  }
+}
+
 .course-card {
   position: relative;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
   min-height: 260px;
   padding: var(--space-5);
   cursor: pointer;
@@ -381,10 +407,37 @@ function goToFirstCourse() {
   line-height: 1.5;
 }
 
+.course-card-footer {
+  margin-top: var(--space-6);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+@media (max-width: 640px) {
+  .course-card-footer {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-4);
+    width: 100%;
+  }
+
+  .course-card-action-wrap {
+    width: 100%;
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .course-card-action {
+    width: auto;
+  }
+}
+
 .course-card-meta {
   display: flex;
+  align-items: center;
   gap: var(--space-4);
-  margin-top: var(--space-5);
   color: var(--color-text-secondary);
   font-size: var(--text-sm);
   font-weight: 800;
@@ -416,6 +469,24 @@ function goToFirstCourse() {
   line-height: 1.05;
   font-weight: 800;
   letter-spacing: -0.04em;
+}
+
+@media (max-width: 640px) {
+  .dashboard-hero {
+    min-height: 250px;
+    padding: 36px 32px;
+    border-radius: 28px;
+  }
+
+  .dashboard-hero h1 {
+    font-size: clamp(34px, 10vw, 48px);
+  }
+
+  .dashboard-hero p {
+    font-size: 1.35rem;
+    line-height: 1.45;
+    margin-bottom: 28px;
+  }
 }
 .hero-action-slot {
   min-height: 56px;
