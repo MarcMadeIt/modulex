@@ -212,6 +212,12 @@ const options: swaggerJsdoc.Options = {
                 "From the LEGO Group's vision in 1963 to a global leader in architectural signage and wayfinding.",
             },
             order: { type: "number", example: 1 },
+            duration: {
+              type: "number",
+              example: 12,
+              description:
+                "Aggregated duration in minutes (sum of material expectedDuration; falls back to module-level duration if materials have none).",
+            },
             materialsCount: { type: "number", example: 3 },
           },
         },
@@ -226,6 +232,11 @@ const options: swaggerJsdoc.Options = {
                 "From the LEGO Group's vision in 1963 to a global leader in architectural signage and wayfinding.",
             },
             order: { type: "number", example: 1 },
+            duration: {
+              type: "number",
+              example: 12,
+              description: "Module-level duration in minutes. Used as fallback when materials carry no expectedDuration.",
+            },
             materials: {
               type: "array",
               items: { $ref: "#/components/schemas/Material" },
@@ -241,6 +252,28 @@ const options: swaggerJsdoc.Options = {
               type: "string",
               example:
                 "A practical introduction to Modulex product families and how they solve navigation challenges in hospitals, airports, universities, and corporate campuses.",
+            },
+            modules: {
+              type: "array",
+              description: "Optional list of modules to create together with the course.",
+              items: {
+                type: "object",
+                required: ["title", "order"],
+                properties: {
+                  title: { type: "string", example: "Our History & Heritage" },
+                  description: { type: "string", example: "From the LEGO Group's vision in 1963 to a global leader." },
+                  order: { type: "number", example: 1 },
+                  duration: {
+                    type: "number",
+                    example: 12,
+                    description: "Duration in minutes for this module.",
+                  },
+                  materials: {
+                    type: "array",
+                    items: { $ref: "#/components/schemas/Material" },
+                  },
+                },
+              },
             },
           },
         },
@@ -266,6 +299,11 @@ const options: swaggerJsdoc.Options = {
                 "How modularity, precision, and Scandinavian functional design come together in every product we make.",
             },
             order: { type: "number", example: 2 },
+            duration: {
+              type: "number",
+              example: 12,
+              description: "Duration in minutes for this module. Stored at module level and used as fallback for duration calculations.",
+            },
             materials: {
               type: "array",
               items: { $ref: "#/components/schemas/Material" },
@@ -295,6 +333,11 @@ const options: swaggerJsdoc.Options = {
                 "How modularity, precision, and Scandinavian functional design come together in every product we make.",
             },
             order: { type: "number", example: 2 },
+            duration: {
+              type: "number",
+              example: 12,
+              description: "Duration in minutes for this module.",
+            },
             materials: {
               type: "array",
               items: { $ref: "#/components/schemas/Material" },

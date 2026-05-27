@@ -262,6 +262,7 @@ function buildPayload() {
         title: module.title.trim(),
         description: "",
         order: moduleIndex + 1,
+        duration: expectedDuration,
         materials: module.materials.map((material) => {
           // contentId sendes med når materialet kommer fra biblioteket.
           // Backend bruger den til at hente title/url live fra Content
