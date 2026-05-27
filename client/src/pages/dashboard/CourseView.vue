@@ -305,7 +305,6 @@ async function loadCourse() {
         }
 
         const moduleData = await moduleResponse.json();
-
         return moduleData.module || moduleData;
       }),
     );
@@ -380,15 +379,33 @@ function getYoutubeEmbedUrl(url) {
 
   return videoId ? `https://www.youtube.com/embed/${videoId}` : "";
 }
+function mapMaterialForFrontend(material) {
+  return {
+    ...material,
+    id: material.contentId,
+    duration: material.expectedDuration ?? "",
+  };
+}
+
+function getModuleDurationFromMaterials(materials) {
+  return materials.reduce((total, material) => {
+    return total + (Number(material.duration) || 0);
+  }, 0);
+}
 
 function mapModuleForFrontend(module) {
+  const materials = module.materials || module.contents || [];
+  const mappedMaterials = materials.map(mapMaterialForFrontend);
+  const calculatedDuration = getModuleDurationFromMaterials(mappedMaterials);
+
   return {
     id: module._id || module.id,
     title: module.title,
     description: module.description || "",
-    duration: module.duration || "",
+    duration:
+      module.duration ?? module.expectedDuration ?? calculatedDuration ?? "",
     order: module.order || 0,
-    materials: module.materials || module.contents || [],
+    materials: mappedMaterials,
   };
 }
 
