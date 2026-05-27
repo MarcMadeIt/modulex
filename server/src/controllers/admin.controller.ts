@@ -124,6 +124,7 @@ type IncomingModule = {
   title?: string;
   description?: string;
   order?: number;
+  duration?: number;
   materials?: IncomingMaterial[];
 };
 
@@ -187,6 +188,10 @@ export const createCourse = async (req: AuthRequest, res: Response) => {
             description:
               typeof mod.description === "string" ? mod.description.trim() : "",
             order: typeof mod.order === "number" ? mod.order : index + 1,
+            duration:
+              typeof mod.duration === "number" && Number.isFinite(mod.duration)
+                ? mod.duration
+                : undefined,
             materials,
           };
         });
@@ -275,11 +280,11 @@ export const createModule = async (req: AuthRequest, res: Response) => {
     if (!course) {
       return res.status(404).json({ message: "Course not found" });
     }
-    const { title, description, order, materials } = req.body;
+    const { title, description, order, duration, materials } = req.body;
     if (!title || order === undefined) {
       return res.status(400).json({ message: "Title and order are required" });
     }
-    const mod = await Module.create({ courseId: id, title, description, order, materials });
+    const mod = await Module.create({ courseId: id, title, description, order, duration, materials });
     return res.status(201).json({ module: mod });
   } catch {
     return res.status(500).json({ message: "Failed to create module" });
