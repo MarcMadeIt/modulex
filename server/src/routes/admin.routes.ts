@@ -7,6 +7,7 @@ import {
   createCourse,
   updateCourse,
   deleteCourse,
+  getAdminModules,
   createModule,
   updateModule,
   deleteModule,
@@ -418,6 +419,49 @@ router.get("/courses/:id/customers", getCourseCustomers);
 /**
  * @swagger
  * /admin/courses/{id}/modules:
+ *   get:
+ *     summary: Get all modules for a course
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Course ID
+ *         example: 664f1c2e8b1a2c3d4e5f6a7b
+ *     responses:
+ *       200:
+ *         description: List of modules sorted by order
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 modules:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/ModuleDetail'
+ *       401:
+ *         description: Not authenticated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       403:
+ *         description: Forbidden - admin role required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       404:
+ *         description: Course not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *   post:
  *     summary: Add a module to a course
  *     tags: [Admin]
@@ -472,6 +516,7 @@ router.get("/courses/:id/customers", getCourseCustomers);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
+router.get("/courses/:id/modules", getAdminModules);
 router.post("/courses/:id/modules", createModule);
 
 /**

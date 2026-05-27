@@ -248,6 +248,23 @@ export const deleteCourse = async (req: AuthRequest, res: Response) => {
   }
 };
 
+export const getAdminModules = async (req: AuthRequest, res: Response) => {
+  try {
+    const id = req.params.id as string;
+    if (!Types.ObjectId.isValid(id)) {
+      return res.status(404).json({ message: "Course not found" });
+    }
+    const course = await Course.exists({ _id: id });
+    if (!course) {
+      return res.status(404).json({ message: "Course not found" });
+    }
+    const modules = await Module.find({ courseId: id }).sort({ order: 1 });
+    return res.status(200).json({ modules });
+  } catch {
+    return res.status(500).json({ message: "Failed to get modules" });
+  }
+};
+
 export const createModule = async (req: AuthRequest, res: Response) => {
   try {
     const id = req.params.id as string;
