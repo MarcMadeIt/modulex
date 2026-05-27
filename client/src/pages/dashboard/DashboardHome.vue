@@ -72,11 +72,10 @@
           class="course-card"
           @click="openCourse(course)"
         >
-          <!-- <div
-            class="course-progress-top"
-            :style="{ width: course.progress + '%' }"
-          /> -->
-          <ProgressBar :percentage="course.progress" />
+          <ProgressBar
+            class="course-card-progress"
+            :percentage="course.progress"
+          />
 
           <div class="card-header">
             <div class="icon-box">
@@ -265,6 +264,10 @@ function goToFirstCourse() {
 
 <style scoped>
 .course-card {
+  position: relative;
+  overflow: hidden;
+  min-height: 260px;
+  padding: var(--space-5);
   cursor: pointer;
   transition:
     transform 0.2s ease,
@@ -298,6 +301,24 @@ function goToFirstCourse() {
   transition:
     transform 0.2s ease,
     box-shadow 0.2s ease;
+}
+
+.course-card-progress {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 2;
+}
+
+.course-card-progress :deep(.progress) {
+  height: 10px;
+  border-radius: 0;
+  background: transparent;
+}
+
+.course-card-progress :deep(.progress-fill) {
+  border-radius: 0;
 }
 
 .course-card:hover {
