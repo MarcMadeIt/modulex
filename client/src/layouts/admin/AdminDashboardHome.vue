@@ -502,7 +502,7 @@
 
     function statusLabelFor(status) {
         if (status === "pending_approval") return "Survey besvaret";
-        if (status === "pending_activation") return "Klar til afsendelse";
+        if (status === "pending_activation") return "Afventer registrering";
         if (status === "active") return "Aktiv";
         return status || "Ukendt";
     }
@@ -888,7 +888,7 @@
         if (successTimeout) clearTimeout(successTimeout);
         successTimeout = setTimeout(() => {
             successMessage.value = "";
-        }, 3500);
+        }, 8000);
     }
 </script>
 
