@@ -4,17 +4,23 @@
     <section class="dashboard-hero">
       <div class="dashboard-hero-content">
         <h1>
-          Velkommen,
+          {{ hasCompletedAllCourses ? "Tillykke," : "Velkommen," }}
           <span>{{ companyName }}</span>
         </h1>
+
         <p>
-          Du er godt på vej til at blive Modulex certificeret partner. Færdiggør
-          dine åbne moduler for at få adgang til bestillingsportalen.
+          {{ heroText }}
         </p>
 
-        <AppButton arrow @click="goToFirstCourse">
-          {{ heroButtonText }}
-        </AppButton>
+        <div class="hero-action-slot">
+          <AppButton
+            v-if="!hasCompletedAllCourses"
+            arrow
+            @click="goToFirstCourse"
+          >
+            {{ heroButtonText }}
+          </AppButton>
+        </div>
       </div>
 
       <div class="dashboard-hero-pattern">
@@ -164,8 +170,28 @@ const filteredCourses = computed(() => {
   return courses.value;
 });
 
+const hasCourses = computed(() => {
+  return courses.value.length > 0;
+});
+
+const hasCompletedAllCourses = computed(() => {
+  return hasCourses.value && courses.value.every((course) => course.completed);
+});
+
 const hasStartedAnyCourse = computed(() => {
   return courses.value.some((course) => course.progress > 0);
+});
+
+const heroTitle = computed(() => {
+  return hasCompletedAllCourses.value
+    ? `Tillykke, ${companyName.value}`
+    : `Velkommen, ${companyName.value}`;
+});
+
+const heroText = computed(() => {
+  return hasCompletedAllCourses.value
+    ? "Du har færdiggjort alle dine kurser og gennemført din onboarding. Du er nu klar til at arbejde videre som Modulex partner."
+    : "Du er godt på vej til at blive Modulex certificeret partner. Færdiggør dine åbne moduler for at få adgang til bestillingsportalen.";
 });
 
 const heroButtonText = computed(() => {
@@ -377,17 +403,11 @@ function goToFirstCourse() {
   position: relative;
   overflow: hidden;
   display: flex;
-  min-height: 280px;
+  min-height: 300px;
   padding: 48px 64px;
   border-radius: 32px;
   background: #191919;
   color: #fff;
-}
-
-.dashboard-hero-content {
-  position: relative;
-  z-index: 2;
-  max-width: 680px;
 }
 
 .dashboard-hero h1 {
@@ -396,6 +416,11 @@ function goToFirstCourse() {
   line-height: 1.05;
   font-weight: 800;
   letter-spacing: -0.04em;
+}
+.hero-action-slot {
+  min-height: 56px;
+  display: flex;
+  align-items: center;
 }
 
 .dashboard-hero h1 span {
