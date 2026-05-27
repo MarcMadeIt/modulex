@@ -21,7 +21,7 @@
           <div :class="['survey-header', { 'success': contactSuccess }]">
             <div class="survey-icon">{{ contactSuccess ? '✅' : '📧' }}</div>
             <div>
-              <h1 class="survey-title">{{ contactSuccess ? 'Tak — dine oplysninger er sendt' : 'Næste skridt' }}</h1>
+              <h1 class="survey-title">{{ contactSuccess ? 'Tak, dine oplysninger er sendt' : 'Næste skridt' }}</h1>
               <p class="survey-description">
                 {{ contactSuccess ? 'Vi har modtaget dine oplysninger og vender tilbage til dig snarest.' : 'Udfyld dine kontaktoplysninger for at afslutte' }}
               </p>
@@ -38,6 +38,23 @@
 
             <template v-else>
               <form @submit.prevent="handleContactSubmit">
+                <div class="form-group">
+                  <label class="input-label" for="contact-email">Email</label>
+                  <input
+                    id="contact-email"
+                    v-model="contactForm.email"
+                    type="email"
+                    class="input"
+                    :class="{ 'input-locked': emailLocked }"
+                    :readonly="emailLocked"
+                    placeholder="din@email.dk"
+                    required
+                  />
+                  <p v-if="emailLocked" class="input-hint">
+                    🔒 Knyttet til din invitation og kan ikke ændres.
+                  </p>
+                </div>
+
                 <div class="form-group">
                   <label class="input-label" for="contact-company">Virksomhedsnavn</label>
                   <input
@@ -60,23 +77,6 @@
                     placeholder="Dit navn"
                     required
                   />
-                </div>
-
-                <div class="form-group">
-                  <label class="input-label" for="contact-email">Email</label>
-                  <input
-                    id="contact-email"
-                    v-model="contactForm.email"
-                    type="email"
-                    class="input"
-                    :class="{ 'input-locked': emailLocked }"
-                    :readonly="emailLocked"
-                    placeholder="din@email.dk"
-                    required
-                  />
-                  <p v-if="emailLocked" class="input-hint">
-                    🔒 Knyttet til din invitation og kan ikke ændres.
-                  </p>
                 </div>
 
                 <div class="form-group">
@@ -103,8 +103,7 @@
           </div>
 
           <div class="survey-footer">
-            <div class="survey-footer-item active">PERSONLIG PROFIL</div>
-            <div class="survey-footer-item active">KONTAKTOPLYSNINGER</div>
+            <img src="/Modulex_Logo_Full_Colour.jpg" alt="moduleX" class="survey-footer-logo" />
           </div>
         </div>
 
@@ -145,9 +144,7 @@
           </div>
 
           <div class="survey-footer">
-            <div class="survey-footer-item active">PERSONLIG PROFIL</div>
-
-            <div class="survey-footer-item">SKRÆDDERSYET INDHOLD</div>
+            <img src="/Modulex_Logo_Full_Colour.jpg" alt="moduleX" class="survey-footer-logo" />
           </div>
         </div>
       </div>
@@ -362,18 +359,21 @@ async function handleContactSubmit() {
   border-top: 1px solid var(--color-border-light);
 
   display: flex;
-  gap: var(--space-6);
+  justify-content: center;
+  align-items: center;
 
   padding: var(--space-5) var(--space-6);
-
-  color: var(--color-primary-light);
-  font-size: var(--text-sm);
-  font-weight: 900;
-  letter-spacing: 0.08em;
 }
 
-.survey-footer-item.active {
-  color: var(--color-primary-medium);
+.survey-footer-logo {
+  height: 48px;
+  width: auto;
+  opacity: 0.6;
+  transition: opacity 0.2s ease;
+}
+
+.survey-footer-logo:hover {
+  opacity: 1;
 }
 
 .contact-confirmation {
