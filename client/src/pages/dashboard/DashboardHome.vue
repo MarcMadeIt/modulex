@@ -162,22 +162,21 @@ const companyName = computed(() => {
   return currentUser.value?.contactPerson || "virksomhed";
 });
 
+// Filtrerer kurserne ud fra valgt filter: alle, i gang eller afsluttede.
 const filteredCourses = computed(() => {
   if (activeFilter.value === "completed") {
     return courses.value.filter((course) => course.completed);
   }
-
   if (activeFilter.value === "active") {
     return courses.value.filter((course) => !course.completed);
   }
-
   return courses.value;
 });
 
 const hasCourses = computed(() => {
   return courses.value.length > 0;
 });
-
+// Bruges til at ændre hero-tekst, når alle kurser er gennemført.
 const hasCompletedAllCourses = computed(() => {
   return hasCourses.value && courses.value.every((course) => course.completed);
 });
@@ -206,6 +205,7 @@ onMounted(() => {
   loadDashboard();
 });
 
+// Henter brugerinfo og alle kurser, som den indloggede bruger har adgang til.
 async function loadDashboard() {
   loading.value = true;
   errorMessage.value = "";
@@ -254,6 +254,7 @@ async function loadAuthUser() {
 
   currentUser.value = auth.state.user;
 }
+// Mapper API-data til det format, som dashboardets course cards bruger.
 
 function mapApiCoursesForFrontend(apiCourses) {
   return apiCourses.map((course) => {
@@ -271,10 +272,9 @@ function mapApiCoursesForFrontend(apiCourses) {
       totalDuration: course.totalDuration ?? 0,
     };
   });
-
   console.log("COURSE:", courses.value);
 }
-
+// Åbner kursus. Hvis kurset er fuldført, åbnes det i review/gense-mode.
 function openCourse(course) {
   router.push({
     path: `/dashboard/course/${course.id}`,
@@ -282,6 +282,8 @@ function openCourse(course) {
   });
 }
 
+// Hero-knappen åbner første aktive kursus.
+// Hvis alle er fuldført, falder den tilbage til første kursus.
 function goToFirstCourse() {
   const firstActiveCourse =
     courses.value.find((course) => !course.completed) || courses.value[0];
