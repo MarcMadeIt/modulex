@@ -406,7 +406,7 @@
         .manual-email-row input {
             width: 100%;
             border: 1px solid #eee;
-            background: #fafafa;
+            background: var(--color-input-bg);
             border-radius: 12px;
             padding: 14px 16px;
             font-size: 14px;

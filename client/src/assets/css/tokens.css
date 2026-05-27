@@ -22,6 +22,8 @@
     --color-bg-page: #f5f5f5;
     --color-bg-paper: #ffffff;
     --color-bg-dark: #111111;
+    --color-input-bg: #e9edf2;
+    --color-input-bg-locked: #e1e6ec;
     /* Borders */
     --color-border: #d8dde3;
     --color-border-light: #eeeeee;

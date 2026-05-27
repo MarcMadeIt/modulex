@@ -853,7 +853,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: var(--color-bg-paper);
+  background: var(--color-input-bg);
   border: 1px solid var(--color-border-light);
   border-radius: 10px;
   padding: 8px 12px;

@@ -1007,7 +1007,7 @@
         .admin-search input {
             width: 100%;
             border: 1px solid #eee;
-            background: #fafafa;
+            background: var(--color-input-bg);
             border-radius: 12px;
             padding: 14px 16px;
             font-size: 14px;
@@ -1309,7 +1309,7 @@
         .assign-search input {
             width: 100%;
             border: none;
-            background: #f8f8f8;
+            background: var(--color-input-bg);
             border-radius: 14px;
             padding: 16px 18px;
             font-size: 14px;
