@@ -88,90 +88,105 @@
         </div>
 
         <div class="input-group">
-          <label for="password" class="input-label">Password</label>
+          <label for="password" class="input-label">Adgangskode</label>
           <input
             id="password"
             v-model="password"
             type="password"
-            placeholder="*********"
             class="input"
             required
           />
 
-          <p
-            style="
-              margin-top: 10px;
-              font-size: 0.75rem;
-              color: #9ca3af;
-              line-height: 1.5;
-              font-weight: 500;
-            "
-          >
-            Adgangskoden skal bestå af mindst
-            <span
+          <div style="margin-top: 10px; line-height: 1.6">
+            <p
               :style="{
-                color: hasLength ? '#10b981' : 'inherit',
-                fontWeight: hasLength ? '700' : 'inherit',
-                transition: 'color 0.3s',
+                fontSize: '0.8rem',
+                fontWeight: hasLength ? '700' : '500',
+                color: hasLength ? '#10b981' : '#e04f26',
+                margin: '0 0 4px 0',
+                transition: 'color 0.2s',
               }"
-              >8 tegn</span
-            >,
-
-            <span
-              :style="{
-                color: hasUpper ? '#10b981' : 'inherit',
-                fontWeight: hasUpper ? '700' : 'inherit',
-                transition: 'color 0.3s',
-              }"
-              >stort bogstav</span
-            >,
-
-            <span
-              :style="{
-                color: hasNumber ? '#10b981' : 'inherit',
-                fontWeight: hasNumber ? '700' : 'inherit',
-                transition: 'color 0.3s',
-              }"
-              >tal</span
             >
-            og
-
-            <span
+              {{ hasLength ? '✓ Mindst 8 tegn' : '✗ Mindst 8 tegn' }}
+            </p>
+            <p
               :style="{
-                color: hasSpecial ? '#10b981' : 'inherit',
-                fontWeight: hasSpecial ? '700' : 'inherit',
-                transition: 'color 0.3s',
+                fontSize: '0.8rem',
+                fontWeight: hasUpper ? '700' : '500',
+                color: hasUpper ? '#10b981' : '#e04f26',
+                margin: '0 0 4px 0',
+                transition: 'color 0.2s',
               }"
-              >specialtegn (!@#$%)</span
-            >.
-          </p>
+            >
+              {{ hasUpper ? '✓ Stort bogstav (A-Z)' : '✗ Stort bogstav (A-Z)' }}
+            </p>
+            <p
+              :style="{
+                fontSize: '0.8rem',
+                fontWeight: hasNumber ? '700' : '500',
+                color: hasNumber ? '#10b981' : '#e04f26',
+                margin: '0 0 4px 0',
+                transition: 'color 0.2s',
+              }"
+            >
+              {{ hasNumber ? '✓ Tal (0-9)' : '✗ Tal (0-9)' }}
+            </p>
+            <p
+              :style="{
+                fontSize: '0.8rem',
+                fontWeight: hasSpecial ? '700' : '500',
+                color: hasSpecial ? '#10b981' : '#e04f26',
+                margin: '0',
+                transition: 'color 0.2s',
+              }"
+            >
+              {{ hasSpecial ? '✓ Specialtegn (!@#$%)' : '✗ Specialtegn (!@#$%)' }}
+            </p>
+          </div>
         </div>
 
         <div class="input-group">
           <label for="confirmPassword" class="input-label"
-            >Gentag password</label
+            >Gentag adgangskode</label
           >
           <input
             id="confirmPassword"
             v-model="confirmPassword"
             type="password"
-            placeholder="*********"
             class="input"
             required
           />
+
+          <p
+            v-if="confirmPassword"
+            :style="{
+              marginTop: '8px',
+              fontSize: '0.85rem',
+              fontWeight: 700,
+              color: password === confirmPassword ? '#10b981' : '#e04f26',
+              textAlign: 'center',
+              margin: '8px 0 0 0',
+              transition: 'color 0.2s',
+            }"
+          >
+            {{ password === confirmPassword ? '✓ Adgangskoderne matcher' : '✗ Adgangskoderne er ikke ens' }}
+          </p>
         </div>
 
         <p
           v-if="errorMessage"
           style="
             color: #e04f26;
-            font-size: 0.8rem;
-            font-weight: 600;
-            margin-top: -10px;
+            font-size: 0.85rem;
+            fontWeight: 700;
+            margin-top: -5px;
             text-align: center;
+            padding: 8px;
+            backgroundColor: '#fee2e2';
+            borderRadius: '4px';
           "
         >
-          {{ errorMessage }}
+          ⚠️ {{ errorMessage }}
         </p>
 
         <div style="margin-top: 12px">
@@ -205,7 +220,7 @@
 
       <div style="margin-top: 24px">
         <a
-          href="#"
+          href="/login"
           style="
             color: #e04f26;
             text-decoration: none;
@@ -267,12 +282,17 @@ const handleSignup = async () => {
   errorMessage.value = "";
 
   if (!isPasswordSecure.value) {
-    errorMessage.value = "Adgangskoden opfylder ikke alle sikkerhedskrav.";
+    const missing = [];
+    if (!hasLength.value) missing.push("8+ tegn");
+    if (!hasUpper.value) missing.push("stort bogstav");
+    if (!hasNumber.value) missing.push("tal");
+    if (!hasSpecial.value) missing.push("specialtegn");
+    errorMessage.value = `Adgangskode mangler: ${missing.join(", ")}`;
     return;
   }
 
   if (password.value !== confirmPassword.value) {
-    errorMessage.value = "Adgangskoderne stemmer ikke overens!";
+    errorMessage.value = "Adgangskoderne stemmer ikke overens.";
     return;
   }
     try {
