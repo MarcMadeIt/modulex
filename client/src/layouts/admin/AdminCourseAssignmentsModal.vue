@@ -8,8 +8,7 @@
                     <p>{{ course.description }}</p>
                 </div>
 
-                <button type="button"
-                        @click="closeModal">
+                <button type="button" @click="closeModal">
                     ×
                 </button>
             </header>
@@ -37,24 +36,27 @@
                            placeholder="Søg i modtagere..." />
                 </div>
 
-                <div v-if="isLoading"
-                     class="empty-state">
-                    Henter modtagere...
+                <div v-if="isLoading" class="empty-state">
+                    Henter modtagere og progress...
                 </div>
 
-                <div v-else-if="loadError"
-                     class="empty-state">
+                <div v-else-if="loadError" class="empty-state error">
                     {{ loadError }}
                 </div>
 
-                <div v-else-if="filteredAssignedPartners.length > 0"
-                     class="receiver-list">
+                <div v-else-if="filteredAssignedPartners.length > 0" class="receiver-list">
                     <div v-for="partner in filteredAssignedPartners"
-                         :key="partner._id"
+                         :key="partner._id || partner.id"
                          class="receiver-card">
                         <div>
-                            <strong>{{ partner.contactPerson || partner.email }}</strong>
-                            <p v-if="partner.companyName">{{ partner.companyName }}</p>
+                            <strong>
+                                {{ partner.contactPerson || partner.name || partner.email }}
+                            </strong>
+
+                            <p v-if="partner.companyName || partner.company">
+                                {{ partner.companyName || partner.company }}
+                            </p>
+
                             <small>{{ partner.email }}</small>
                         </div>
 
@@ -64,25 +66,29 @@
                                 {{ getProgressStatus(partner).text }}
                             </span>
 
-                            <div class="progress-bar">
-                                <div class="progress-fill"
-                                     :style="{ width: getPartnerProgress(partner) + '%' }"></div>
-                            </div>
+                            <ProgressBar class="admin-progress-bar"
+                                         :percentage="getPartnerProgress(partner)" />
 
-                            <strong>{{ getPartnerProgress(partner) }}% færdig</strong>
+                            <div class="progress-meta">
+                                <strong>{{ getPartnerProgress(partner) }}% færdig</strong>
+
+                                <small>
+                                    {{ getCompletedModules(partner) }} /
+                                    {{ getTotalModules(partner) }}
+                                    moduler
+                                </small>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <div v-else
-                     class="empty-state">
+                <div v-else class="empty-state">
                     Kurset er ikke tildelt til nogen kunder endnu.
                 </div>
             </section>
 
             <footer class="assignments-footer">
-                <button type="button"
-                        @click="closeModal">
+                <button type="button" @click="closeModal">
                     Luk visning
                 </button>
             </footer>
@@ -91,120 +97,266 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from "vue";
+    import { computed, onMounted, ref } from "vue";
 
-const props = defineProps({
-  course: {
-    type: Object,
-    required: true,
-  },
-});
+    import ProgressBar from "../../components/ui/ProgressBar.vue";
 
-const emit = defineEmits(["close"]);
+    const props = defineProps({
+        course: {
+            type: Object,
+            required: true,
+        },
+    });
 
-const API_URL = import.meta.env.VITE_API_URL;
+    const emit = defineEmits(["close"]);
 
-const searchQuery = ref("");
-const isLoading = ref(true);
-const loadError = ref("");
+    const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
-// Modtagere af det viste kursus hentes fra MongoDB.
-const assignedPartners = ref([]);
+    const searchQuery = ref("");
+    const isLoading = ref(true);
+    const loadError = ref("");
 
-const filteredAssignedPartners = computed(() => {
-  const search = searchQuery.value.toLowerCase().trim();
+    const assignedPartners = ref([]);
 
-  if (!search) {
-    return assignedPartners.value;
-  }
+    const courseId = computed(() => {
+        return props.course?._id || props.course?.id || props.course?.courseId;
+    });
 
-  return assignedPartners.value.filter((partner) => {
-    const contactPerson = (partner.contactPerson || "").toLowerCase();
-    const companyName = (partner.companyName || "").toLowerCase();
-    const email = (partner.email || "").toLowerCase();
+    const filteredAssignedPartners = computed(() => {
+        const search = searchQuery.value.toLowerCase().trim();
 
-    return (
-      contactPerson.includes(search) ||
-      companyName.includes(search) ||
-      email.includes(search)
-    );
-  });
-});
+        if (!search) {
+            return assignedPartners.value;
+        }
 
-const completedCount = computed(() => {
-  return assignedPartners.value.filter((partner) => {
-    return getPartnerProgress(partner) >= 100;
-  }).length;
-});
+        return assignedPartners.value.filter((partner) => {
+            const contactPerson = String(
+                partner.contactPerson || partner.name || ""
+            ).toLowerCase();
 
-async function loadAssigned() {
-  isLoading.value = true;
-  loadError.value = "";
+            const companyName = String(
+                partner.companyName || partner.company || ""
+            ).toLowerCase();
 
-  const courseId = props.course?._id || props.course?.id;
+            const email = String(partner.email || "").toLowerCase();
 
-  try {
-    const res = await fetch(
-      `${API_URL}/admin/courses/${courseId}/customers`,
-      { credentials: "include" },
-    );
+            return (
+                contactPerson.includes(search) ||
+                companyName.includes(search) ||
+                email.includes(search)
+            );
+        });
+    });
 
-    if (!res.ok) throw new Error("Kunne ikke hente modtagere.");
+    const completedCount = computed(() => {
+        return assignedPartners.value.filter((partner) => {
+            return getPartnerProgress(partner) >= 100;
+        }).length;
+    });
 
-    const data = await res.json();
-    assignedPartners.value = Array.isArray(data.customers)
-      ? data.customers
-      : [];
-  } catch (err) {
-    loadError.value = err.message || "Kunne ikke hente modtagere.";
-    assignedPartners.value = [];
-  } finally {
-    isLoading.value = false;
-  }
-}
+    onMounted(() => {
+        loadAssigned();
+    });
 
-onMounted(loadAssigned);
+    function getToken() {
+        return (
+            localStorage.getItem("token") ||
+            localStorage.getItem("authToken") ||
+            localStorage.getItem("modulex_token")
+        );
+    }
 
-function getPartnerProgress(partner) {
-  // Indtil UserProgress-data eksponeres pr. (user, course) er det
-  // bare en placeholder beregnet ud fra _id, præcis som før.
-  const id = String(partner._id || "");
-  if (!id) return 0;
-  const lastNumber = Number(id.slice(-1));
+    async function apiFetch(path, options = {}) {
+        const token = getToken();
 
-  if (Number.isNaN(lastNumber)) return 25;
-  if (lastNumber % 3 === 0) return 100;
-  if (lastNumber % 2 === 0) return 90;
+        const headers = {
+            "Content-Type": "application/json",
+            ...(options.headers || {}),
+        };
 
-  return 25;
-}
+        if (token) {
+            headers.Authorization = `Bearer ${token}`;
+        }
 
-function getProgressStatus(partner) {
-  const progress = getPartnerProgress(partner);
+        const response = await fetch(`${API_URL}${path}`, {
+            ...options,
+            headers,
+            credentials: "include",
+        });
 
-  if (progress >= 100) {
-    return {
-      text: "Fuldført",
-      class: "completed",
-    };
-  }
+        const data = await response.json().catch(() => ({}));
 
-  if (progress > 0) {
-    return {
-      text: "I gang",
-      class: "active",
-    };
-  }
+        if (!response.ok) {
+            throw new Error(data.message || data.error || `API fejl: ${response.status}`);
+        }
 
-  return {
-    text: "Ikke påbegyndt",
-    class: "not-started",
-  };
-}
+        return data;
+    }
 
-function closeModal() {
-  emit("close");
-}
+    async function loadAssigned() {
+        isLoading.value = true;
+        loadError.value = "";
+
+        if (!courseId.value) {
+            loadError.value = "CourseId mangler.";
+            assignedPartners.value = [];
+            isLoading.value = false;
+            return;
+        }
+
+        try {
+            const assignedData = await apiFetch(
+                `/admin/courses/${courseId.value}/customers`
+            );
+
+            const customers = Array.isArray(assignedData.customers)
+                ? assignedData.customers
+                : Array.isArray(assignedData.users)
+                    ? assignedData.users
+                    : Array.isArray(assignedData)
+                        ? assignedData
+                        : [];
+
+            const customersWithProgress = await Promise.all(
+                customers.map(async (customer) => {
+                    return enrichCustomerWithCourseProgress(customer);
+                })
+            );
+
+            assignedPartners.value = customersWithProgress;
+        } catch (err) {
+            loadError.value = err.message || "Kunne ikke hente modtagere.";
+            assignedPartners.value = [];
+        } finally {
+            isLoading.value = false;
+        }
+    }
+
+    async function enrichCustomerWithCourseProgress(customer) {
+        const customerId =
+            customer._id ||
+            customer.id ||
+            customer.userId ||
+            customer.customerId;
+
+        if (!customerId) {
+            return {
+                ...customer,
+                courseProgress: createEmptyProgress(),
+            };
+        }
+
+        try {
+            const data = await apiFetch(`/admin/customers/${customerId}/courses`);
+
+            const assignments = Array.isArray(data.assignments)
+                ? data.assignments
+                : Array.isArray(data.courses)
+                    ? data.courses
+                    : Array.isArray(data.assignedCourses)
+                        ? data.assignedCourses
+                        : Array.isArray(data)
+                            ? data
+                            : [];
+
+            const matchingAssignment = assignments.find((assignment) => {
+                const assignmentCourseId =
+                    assignment.courseId ||
+                    assignment.course ||
+                    assignment._id ||
+                    assignment.id ||
+                    assignment.course?._id ||
+                    assignment.course?.id;
+
+                return String(assignmentCourseId) === String(courseId.value);
+            });
+
+            return {
+                ...customer,
+                courseProgress: matchingAssignment
+                    ? normalizeCourseProgress(matchingAssignment)
+                    : createEmptyProgress(),
+            };
+        } catch (error) {
+            console.error("Kunne ikke hente progress for kunde:", customerId, error);
+
+            return {
+                ...customer,
+                courseProgress: createEmptyProgress(),
+            };
+        }
+    }
+
+    function normalizeCourseProgress(progressData) {
+        const completedModules = Number(progressData.completedModules ?? 0);
+        const totalModules = Number(progressData.totalModules ?? 0);
+
+        let percentage = Number(progressData.percentage ?? 0);
+
+        if (
+            (progressData.percentage === undefined || progressData.percentage === null) &&
+            totalModules > 0
+        ) {
+            percentage = Math.round((completedModules / totalModules) * 100);
+        }
+
+        if (Number.isNaN(percentage)) {
+            percentage = 0;
+        }
+
+        return {
+            completedModules: Number.isNaN(completedModules) ? 0 : completedModules,
+            totalModules: Number.isNaN(totalModules) ? 0 : totalModules,
+            percentage: Math.max(0, Math.min(100, Math.round(percentage))),
+        };
+    }
+
+    function createEmptyProgress() {
+        return {
+            completedModules: 0,
+            totalModules: 0,
+            percentage: 0,
+        };
+    }
+
+    function getPartnerProgress(partner) {
+        return partner.courseProgress?.percentage ?? 0;
+    }
+
+    function getCompletedModules(partner) {
+        return partner.courseProgress?.completedModules ?? 0;
+    }
+
+    function getTotalModules(partner) {
+        return partner.courseProgress?.totalModules ?? 0;
+    }
+
+    function getProgressStatus(partner) {
+        const progress = getPartnerProgress(partner);
+
+        if (progress >= 100) {
+            return {
+                text: "Fuldført",
+                class: "completed",
+            };
+        }
+
+        if (progress > 0) {
+            return {
+                text: "I gang",
+                class: "active",
+            };
+        }
+
+        return {
+            text: "Ikke påbegyndt",
+            class: "not-started",
+        };
+    }
+
+    function closeModal() {
+        emit("close");
+    }
 </script>
 
 <style scoped>
@@ -347,7 +499,34 @@ function closeModal() {
         display: grid;
         gap: 8px;
         justify-items: end;
+        width: 100%;
     }
+
+    .admin-progress-bar {
+        width: 160px;
+    }
+
+        .admin-progress-bar :deep(.progress) {
+            height: 10px;
+            border-radius: 999px;
+            background: #f1f1f1;
+        }
+
+        .admin-progress-bar :deep(.progress-fill) {
+            border-radius: 999px;
+        }
+
+    .progress-meta {
+        display: grid;
+        gap: 2px;
+        justify-items: end;
+    }
+
+        .progress-meta small {
+            color: #777;
+            font-size: 12px;
+            font-weight: 700;
+        }
 
     .status-pill {
         width: fit-content;
@@ -373,24 +552,15 @@ function closeModal() {
             color: #71717a;
         }
 
-    .progress-bar {
-        width: 140px;
-        height: 7px;
-        background: #f1f1f1;
-        border-radius: 50px;
-        overflow: hidden;
-    }
-
-    .progress-fill {
-        height: 100%;
-        background: #ff4d26;
-    }
-
     .empty-state {
         padding: 30px;
         text-align: center;
         color: #777;
     }
+
+        .empty-state.error {
+            color: #b91c1c;
+        }
 
     .assignments-footer {
         padding: 24px 40px 32px;
