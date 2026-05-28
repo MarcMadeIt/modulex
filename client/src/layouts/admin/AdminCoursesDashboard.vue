@@ -6,15 +6,12 @@
                 <p>Administrér træningsmoduler, opret nye moduler og tildel til partnere.</p>
             </div>
 
-            <button class="create-course-btn"
-                    type="button"
-                    @click="openCreateCourse">
+            <button class="create-course-btn" type="button" @click="openCreateCourse">
                 + Opret kursus
             </button>
         </div>
 
-        <div v-if="selectedCourseIds.length > 0"
-             class="bulk-assign-box">
+        <div v-if="selectedCourseIds.length > 0" class="bulk-assign-box">
             <div class="bulk-info">
                 <div class="bulk-icon">▣</div>
 
@@ -37,8 +34,7 @@
                         <span>▾</span>
                     </button>
 
-                    <div v-if="showReceiverDropdown"
-                         class="receiver-dropdown">
+                    <div v-if="showReceiverDropdown" class="receiver-dropdown">
                         <input v-model="receiverSearch"
                                type="text"
                                placeholder="Søg kunde eller virksomhed..." />
@@ -58,13 +54,11 @@
                                 </div>
                             </label>
 
-                            <div v-if="filteredPartnersForDropdown.length === 0"
-                                 class="receiver-empty">
+                            <div v-if="filteredPartnersForDropdown.length === 0" class="receiver-empty">
                                 Ingen kunder matcher søgningen.
                             </div>
 
-                            <div v-if="partnersError"
-                                 class="receiver-empty">
+                            <div v-if="partnersError" class="receiver-empty">
                                 {{ partnersError }}
                             </div>
                         </div>
@@ -73,21 +67,18 @@
 
                 <button class="assign-to-customers-btn"
                         type="button"
-                        :disabled="selectedPartnerIds.length === 0"
+                        :disabled="selectedPartnerIds.length === 0 || isAssigning"
                         @click="assignSelectedCoursesToPartners">
-                    Tildel til kunder
+                    {{ isAssigning ? "Tildeler..." : "Tildel til kunder" }}
                 </button>
 
-                <button class="cancel-bulk-btn"
-                        type="button"
-                        @click="clearBulkSelection">
+                <button class="cancel-bulk-btn" type="button" @click="clearBulkSelection">
                     Annuller
                 </button>
             </div>
         </div>
 
-        <div v-if="successMessage"
-             class="success-message">
+        <div v-if="successMessage" class="success-message">
             {{ successMessage }}
         </div>
 
@@ -97,9 +88,7 @@
                        type="text"
                        placeholder="Søg i kurser efter titel eller beskrivelse..." />
 
-                <button class="toolbar-btn"
-                        type="button"
-                        @click="toggleAllCourses">
+                <button class="toolbar-btn" type="button" @click="toggleAllCourses">
                     {{ allVisibleCoursesSelected ? "Afmarkér alle" : "Markér alle" }}
                 </button>
             </div>
@@ -116,9 +105,7 @@
                  :key="course.id"
                  class="courses-table-row">
                 <label class="checkbox-cell">
-                    <input v-model="selectedCourseIds"
-                           type="checkbox"
-                           :value="course.id" />
+                    <input v-model="selectedCourseIds" type="checkbox" :value="course.id" />
                 </label>
 
                 <div class="course-title-cell">
@@ -138,15 +125,11 @@
                 </span>
 
                 <div class="course-actions">
-                    <button type="button"
-                            title="Se tildeling"
-                            @click="openAssignments(course)">
+                    <button type="button" title="Se tildeling" @click="openAssignments(course)">
                         👥
                     </button>
 
-                    <button type="button"
-                            title="Redigér kursus"
-                            @click="openEditCourse(course)">
+                    <button type="button" title="Redigér kursus" @click="openEditCourse(course)">
                         ✎
                     </button>
 
@@ -165,24 +148,22 @@
                 </div>
             </div>
 
-            <div v-if="coursesError"
-                 class="empty-state">
+            <div v-if="coursesError" class="empty-state">
                 {{ coursesError }}
             </div>
 
-            <div v-else-if="isLoadingCourses"
-                 class="empty-state">
+            <div v-else-if="isLoadingCourses" class="empty-state">
                 Henter kurser...
             </div>
 
-            <div v-else-if="filteredCourses.length === 0"
-                 class="empty-state">
+            <div v-else-if="filteredCourses.length === 0" class="empty-state">
                 Ingen kurser matcher din søgning.
             </div>
         </div>
 
         <AdminCreateCourseForm v-if="showCreateCourseForm"
-                               @close="closeCreateCourse" />
+                               @close="closeCreateCourse"
+                               @created="handleCourseCreated" />
 
         <AdminEditCourseModal v-if="showEditModal && selectedCourseData"
                               :course-data="selectedCourseData"
@@ -203,9 +184,7 @@
     import AdminEditCourseModal from "./AdminEditCourseModal.vue";
     import AdminCourseAssignmentsModal from "./AdminCourseAssignmentsModal.vue";
 
-    import { getCourseForAdmin } from "../../data/dummyCourseService.js";
-
-    const API_URL = import.meta.env.VITE_API_URL;
+    const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
     const courses = ref([]);
     const coursesError = ref("");
@@ -213,58 +192,6 @@
 
     const partners = ref([]);
     const partnersError = ref("");
-
-    function mapCourseFromApi(course) {
-        return {
-            id: course._id,
-            title: course.title,
-            description: course.description,
-            moduleCount: course.moduleCount ?? 0,
-        };
-    }
-
-    async function loadCourses() {
-        isLoadingCourses.value = true;
-        coursesError.value = "";
-
-        try {
-            const res = await fetch(`${API_URL}/admin/courses`, {
-                credentials: "include",
-            });
-
-            if (!res.ok) throw new Error("Kunne ikke hente kurser.");
-
-            const data = await res.json();
-            courses.value = Array.isArray(data.courses)
-                ? data.courses.map(mapCourseFromApi)
-                : [];
-        } catch (err) {
-            coursesError.value = err.message || "Kunne ikke hente kurser.";
-            courses.value = [];
-        } finally {
-            isLoadingCourses.value = false;
-        }
-    }
-
-    async function loadPartners() {
-        try {
-            const res = await fetch(`${API_URL}/admin/customers`, {
-                credentials: "include",
-            });
-
-            if (!res.ok) throw new Error("Kunne ikke hente kunder.");
-
-            const data = await res.json();
-            partners.value = Array.isArray(data.users) ? data.users : [];
-        } catch (err) {
-            partnersError.value = err.message || "Kunne ikke hente kunder.";
-        }
-    }
-
-    onMounted(() => {
-        loadCourses();
-        loadPartners();
-    });
 
     const searchQuery = ref("");
     const receiverSearch = ref("");
@@ -274,6 +201,7 @@
 
     const showReceiverDropdown = ref(false);
     const successMessage = ref("");
+    const isAssigning = ref(false);
 
     const showCreateCourseForm = ref(false);
     const showEditModal = ref(false);
@@ -283,12 +211,100 @@
     const selectedCourseData = ref(null);
     const editMode = ref("edit");
 
+    onMounted(() => {
+        loadCourses();
+        loadPartners();
+    });
+
+    function getToken() {
+        return (
+            localStorage.getItem("token") ||
+            localStorage.getItem("authToken") ||
+            localStorage.getItem("modulex_token")
+        );
+    }
+
+    async function apiFetch(path, options = {}) {
+        const token = getToken();
+
+        const headers = {
+            "Content-Type": "application/json",
+            ...(options.headers || {}),
+        };
+
+        if (token) {
+            headers.Authorization = `Bearer ${token}`;
+        }
+
+        const response = await fetch(`${API_URL}${path}`, {
+            ...options,
+            headers,
+            credentials: "include",
+        });
+
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+            throw new Error(data.message || data.error || `API fejl: ${response.status}`);
+        }
+
+        return data;
+    }
+
+    function mapCourseFromApi(course) {
+        return {
+            id: course._id || course.id,
+            _id: course._id || course.id,
+            title: course.title || "",
+            description: course.description || "",
+            moduleCount: course.moduleCount ?? course.modulesCount ?? 0,
+            raw: course,
+        };
+    }
+
+    async function loadCourses() {
+        isLoadingCourses.value = true;
+        coursesError.value = "";
+
+        try {
+            const data = await apiFetch("/admin/courses");
+
+            courses.value = Array.isArray(data.courses)
+                ? data.courses.map(mapCourseFromApi)
+                : Array.isArray(data)
+                    ? data.map(mapCourseFromApi)
+                    : [];
+        } catch (err) {
+            coursesError.value = err.message || "Kunne ikke hente kurser.";
+            courses.value = [];
+        } finally {
+            isLoadingCourses.value = false;
+        }
+    }
+
+    async function loadPartners() {
+        partnersError.value = "";
+
+        try {
+            const data = await apiFetch("/admin/customers");
+
+            partners.value = Array.isArray(data.users)
+                ? data.users
+                : Array.isArray(data.customers)
+                    ? data.customers
+                    : Array.isArray(data)
+                        ? data
+                        : [];
+        } catch (err) {
+            partnersError.value = err.message || "Kunne ikke hente kunder.";
+            partners.value = [];
+        }
+    }
+
     const filteredCourses = computed(() => {
         const search = searchQuery.value.toLowerCase().trim();
 
-        if (!search) {
-            return courses.value;
-        }
+        if (!search) return courses.value;
 
         return courses.value.filter((course) => {
             const title = course.title || "";
@@ -304,9 +320,7 @@
     const filteredPartnersForDropdown = computed(() => {
         const search = receiverSearch.value.toLowerCase().trim();
 
-        if (!search) {
-            return partners.value;
-        }
+        if (!search) return partners.value;
 
         return partners.value.filter((partner) => {
             const contactPerson = partner.contactPerson || "";
@@ -322,13 +336,11 @@
     });
 
     const allVisibleCoursesSelected = computed(() => {
-        if (filteredCourses.value.length === 0) {
-            return false;
-        }
+        if (filteredCourses.value.length === 0) return false;
 
-        return filteredCourses.value.every((course) =>
-            selectedCourseIds.value.includes(course.id)
-        );
+        return filteredCourses.value.every((course) => {
+            return selectedCourseIds.value.includes(course.id);
+        });
     });
 
     async function refreshCourses() {
@@ -359,27 +371,32 @@
         if (selectedCourseIds.value.length === 0) return;
         if (selectedPartnerIds.value.length === 0) return;
 
+        isAssigning.value = true;
+
         const pairs = [];
+
         for (const partnerId of selectedPartnerIds.value) {
             for (const courseId of selectedCourseIds.value) {
                 pairs.push({ userId: partnerId, courseId });
             }
         }
 
-        // 409 (allerede tildelt) er ikke en fejl her — vi tæller den bare ikke
-        // som en ny tildeling. Andre fejlkoder lader vi boble op til UI'et.
         const results = await Promise.all(
             pairs.map(async ({ userId, courseId }) => {
                 try {
-                    const res = await fetch(`${API_URL}/admin/assign-course`, {
+                    const response = await fetch(`${API_URL}/admin/assign-course`, {
                         method: "POST",
                         credentials: "include",
-                        headers: { "Content-Type": "application/json" },
+                        headers: {
+                            "Content-Type": "application/json",
+                            ...(getToken() ? { Authorization: `Bearer ${getToken()}` } : {}),
+                        },
                         body: JSON.stringify({ userId, courseId }),
                     });
 
-                    if (res.ok) return "created";
-                    if (res.status === 409) return "duplicate";
+                    if (response.ok) return "created";
+                    if (response.status === 409) return "duplicate";
+
                     return "error";
                 } catch {
                     return "error";
@@ -387,8 +404,8 @@
             })
         );
 
-        const created = results.filter((r) => r === "created").length;
-        const failed = results.filter((r) => r === "error").length;
+        const created = results.filter((result) => result === "created").length;
+        const failed = results.filter((result) => result === "error").length;
 
         if (failed > 0) {
             successMessage.value = `${created} tildelinger oprettet, ${failed} fejlede.`;
@@ -400,6 +417,7 @@
         selectedPartnerIds.value = [];
         receiverSearch.value = "";
         showReceiverDropdown.value = false;
+        isAssigning.value = false;
 
         setTimeout(() => {
             successMessage.value = "";
@@ -422,24 +440,24 @@
         refreshCourses();
     }
 
+    function handleCourseCreated() {
+        showCreateCourseForm.value = false;
+        successMessage.value = "Kurset er oprettet.";
+        refreshCourses();
+
+        setTimeout(() => {
+            successMessage.value = "";
+        }, 3500);
+    }
+
     function openEditCourse(course) {
-        const data = getCourseForAdmin(course.id);
-        if (!data) {
-            alert("Redigering for MongoDB-kurser er endnu ikke understøttet.");
-            return;
-        }
-        selectedCourseData.value = data;
+        selectedCourseData.value = course;
         editMode.value = "edit";
         showEditModal.value = true;
     }
 
     function openDuplicateCourse(course) {
-        const data = getCourseForAdmin(course.id);
-        if (!data) {
-            alert("Duplikering for MongoDB-kurser er endnu ikke understøttet.");
-            return;
-        }
-        selectedCourseData.value = data;
+        selectedCourseData.value = course;
         editMode.value = "duplicate";
         showEditModal.value = true;
     }
@@ -447,11 +465,23 @@
     function closeEditModal() {
         showEditModal.value = false;
         selectedCourseData.value = null;
+        editMode.value = "edit";
     }
 
     function handleCourseSaved() {
+        const wasDuplicate = editMode.value === "duplicate";
+
         closeEditModal();
+
+        successMessage.value = wasDuplicate
+            ? "Kurset er duplikeret."
+            : "Kurset er opdateret.";
+
         refreshCourses();
+
+        setTimeout(() => {
+            successMessage.value = "";
+        }, 3500);
     }
 
     function openAssignments(course) {
@@ -470,14 +500,16 @@
         if (!shouldDelete) return;
 
         try {
-            const res = await fetch(`${API_URL}/admin/courses/${courseId}`, {
+            await apiFetch(`/admin/courses/${courseId}`, {
                 method: "DELETE",
-                credentials: "include",
             });
 
-            if (!res.ok) throw new Error("Kunne ikke slette kurset.");
-
+            successMessage.value = "Kurset er slettet.";
             await loadCourses();
+
+            setTimeout(() => {
+                successMessage.value = "";
+            }, 3500);
         } catch (err) {
             coursesError.value = err.message || "Kunne ikke slette kurset.";
         }
@@ -760,10 +792,6 @@
     .course-title-cell strong {
         display: block;
         margin-bottom: 5px;
-    }
-
-    .course-title-cell small {
-        color: #9ca3af;
     }
 
     .course-description {
