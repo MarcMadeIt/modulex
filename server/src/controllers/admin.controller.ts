@@ -467,8 +467,7 @@ export const createLead = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// Henter alle kursustildelinger for en specifik kunde.
-// Returnerer arrayet af UserCourse med populated course-data (title/description).
+// Henter alle kursustildelinger for en specifik kunde inkl. fremgangsdata.
 export const getCustomerCourses = async (req: AuthRequest, res: Response) => {
   try {
     const id = req.params.id as string;
@@ -484,18 +483,46 @@ export const getCustomerCourses = async (req: AuthRequest, res: Response) => {
 
     const grants = await UserCourse.find({ userId: id })
       .populate("courseId", "title description")
-      .sort({ grantedAt: -1 });
+      .sort({ grantedAt: -1 })
+      .lean();
+
+    if (grants.length === 0) {
+      return res.status(200).json({ assignments: [] });
+    }
+
+    const courseIds = grants.map((g) => (g.courseId as any)?._id).filter(Boolean);
+
+    const [moduleCounts, progressRecords] = await Promise.all([
+      Module.aggregate<{ _id: Types.ObjectId; count: number }>([
+        { $match: { courseId: { $in: courseIds } } },
+        { $group: { _id: "$courseId", count: { $sum: 1 } } },
+      ]),
+      UserProgress.find({ userId: id, courseId: { $in: courseIds } }).lean(),
+    ]);
+
+    const countByCourseId = new Map(
+      moduleCounts.map((entry) => [String(entry._id), entry.count]),
+    );
+    const progressByCourseId = new Map(
+      progressRecords.map((p) => [String(p.courseId), p.completedModuleIds.length]),
+    );
 
     const assignments = grants
       .map((grant) => {
         const course = grant.courseId as any;
         if (!course) return null;
+        const courseIdStr = String(course._id);
+        const totalModules = countByCourseId.get(courseIdStr) ?? 0;
+        const completedModules = progressByCourseId.get(courseIdStr) ?? 0;
         return {
           _id: grant._id,
           courseId: course._id,
           title: course.title,
           description: course.description,
           grantedAt: grant.grantedAt,
+          completedModules,
+          totalModules,
+          percentage: totalModules > 0 ? Math.round((completedModules / totalModules) * 100) : 0,
         };
       })
       .filter(Boolean);
