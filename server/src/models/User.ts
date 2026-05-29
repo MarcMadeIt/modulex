@@ -1,5 +1,5 @@
 import { Schema, model, Document } from "mongoose";
-
+// Marc - Status og interface for User-modellen, der repræsenterer kunder og administratorer i systemet. --- IGNORE ---
 export type UserStatus =
   | "pending_survey"
   | "pending_approval"

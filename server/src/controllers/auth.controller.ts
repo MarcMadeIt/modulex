@@ -60,10 +60,6 @@ export const signup = async (req: Request, res: Response) => {
 
     await user.save();
 
-    user.password = hashedPassword;
-    user.status = "active";
-    await user.save();
-
     res.cookie(COOKIE_NAME, signToken(user), cookieOptions);
 
     return res.status(200).json({

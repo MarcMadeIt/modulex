@@ -65,6 +65,7 @@ export const getAdminCourses = async (req: AuthRequest, res: Response) => {
     return res.status(500).json({ message: "Failed to fetch courses" });
   }
 };
+// Nina - Admin-kontroller for håndtering af kunder, kurser og moduler. Indeholder CRUD-operationer og logik for at tildele kurser til kunder. --- IGNORE ---
 
 export const getCourseCustomers = async (req: AuthRequest, res: Response) => {
   try {
@@ -421,7 +422,7 @@ export const createLead = async (req: AuthRequest, res: Response) => {
     if (existing && existing.status !== "pending_survey") {
       return res.status(409).json({ message: "Email is already registered" });
     }
-
+    // Marc - Sender survey-mail uanset om det er en ny lead eller en eksisterende i pending_survey
     try {
       await sendSurveyEmail(cleanEmail);
     } catch (err) {

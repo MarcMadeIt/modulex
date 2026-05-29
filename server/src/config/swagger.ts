@@ -1,6 +1,6 @@
 import path from "path";
 import swaggerJsdoc from "swagger-jsdoc";
-
+// Nina - Swagger-konfiguration for API-dokumentation
 const options: swaggerJsdoc.Options = {
   definition: {
     openapi: "3.0.0",
@@ -235,7 +235,8 @@ const options: swaggerJsdoc.Options = {
             duration: {
               type: "number",
               example: 12,
-              description: "Module-level duration in minutes. Used as fallback when materials carry no expectedDuration.",
+              description:
+                "Module-level duration in minutes. Used as fallback when materials carry no expectedDuration.",
             },
             materials: {
               type: "array",
@@ -255,13 +256,18 @@ const options: swaggerJsdoc.Options = {
             },
             modules: {
               type: "array",
-              description: "Optional list of modules to create together with the course.",
+              description:
+                "Optional list of modules to create together with the course.",
               items: {
                 type: "object",
                 required: ["title", "order"],
                 properties: {
                   title: { type: "string", example: "Our History & Heritage" },
-                  description: { type: "string", example: "From the LEGO Group's vision in 1963 to a global leader." },
+                  description: {
+                    type: "string",
+                    example:
+                      "From the LEGO Group's vision in 1963 to a global leader.",
+                  },
                   order: { type: "number", example: 1 },
                   duration: {
                     type: "number",
@@ -302,7 +308,8 @@ const options: swaggerJsdoc.Options = {
             duration: {
               type: "number",
               example: 12,
-              description: "Duration in minutes for this module. Stored at module level and used as fallback for duration calculations.",
+              description:
+                "Duration in minutes for this module. Stored at module level and used as fallback for duration calculations.",
             },
             materials: {
               type: "array",
