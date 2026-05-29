@@ -26,7 +26,6 @@ export const authRequired = (
   res: Response,
   next: NextFunction,
 ) => {
-  // Token kommer primært fra httpOnly-cookien; Bearer-header som fallback
   const authHeader = req.headers.authorization;
   const bearer = authHeader?.startsWith("Bearer ")
     ? authHeader.split(" ")[1]

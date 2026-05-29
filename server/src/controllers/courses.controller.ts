@@ -11,12 +11,9 @@ const hasAccess = async (userId: string, courseId: string) => {
   return UserCourse.exists({ userId, courseId });
 };
 
-// Når et material har en contentId-reference, vil vi gerne læse title/url
-// fra Content i stedet for det snapshot der ligger i modulet. Det betyder
-// at en opdatering af Content (fx ny YouTube-URL) automatisk slår igennem
-// på alle kurser uden at vi skal re-oprette eller resynke moduler.
 async function resolveMaterials(materials: any[]): Promise<any[]> {
-  if (!Array.isArray(materials) || materials.length === 0) return materials || [];
+  if (!Array.isArray(materials) || materials.length === 0)
+    return materials || [];
 
   const contentIds = materials
     .map((mat) => mat?.contentId)
@@ -36,15 +33,12 @@ async function resolveMaterials(materials: any[]): Promise<any[]> {
       ...mat,
       title: content.title,
       url: content.url,
-      // type bevares fra modulet; Content's "youtube" matcher allerede vores enum
+
       type: content.type === "youtube" ? "youtube" : mat.type,
     };
   });
 }
 
-// Parser et duration-felt fra MongoDB. Accepterer både tal (12) og strenge
-// ("12", "12 min", "12 minutter") — sidstnævnte fordi nogle moduler er
-// oprettet med strengfelter i ældre versioner.
 function parseDurationMinutes(value: unknown): number {
   if (value === null || value === undefined) return 0;
   if (typeof value === "number") return Number.isFinite(value) ? value : 0;
@@ -55,9 +49,6 @@ function parseDurationMinutes(value: unknown): number {
   return 0;
 }
 
-// Beregner varigheden for ét modul. Foretrækker sum af materialernes
-// expectedDuration/duration; ellers falder tilbage til modulets top-level
-// duration-felt (for modules der er importeret med skema fra anden flow).
 function moduleDurationOf(mod: any): number {
   const materials = Array.isArray(mod?.materials) ? mod.materials : [];
   const materialSum = materials.reduce(
@@ -69,7 +60,6 @@ function moduleDurationOf(mod: any): number {
   return parseDurationMinutes(mod?.duration);
 }
 
-// Aggregerer total varighed for et kursus på tværs af alle moduler.
 const computeCourseDuration = async (courseId: any): Promise<number> => {
   const modules = await Module.find({ courseId }).lean();
   return modules.reduce((sum, mod) => sum + moduleDurationOf(mod), 0);
@@ -175,8 +165,6 @@ export const getCourseModules = async (req: AuthRequest, res: Response) => {
       description: mod.description,
       order: mod.order,
       materialsCount: Array.isArray(mod.materials) ? mod.materials.length : 0,
-      // Aggregeret varighed — håndterer både materials.expectedDuration,
-      // materials.duration (string/tal) og et top-level duration-felt.
       duration: moduleDurationOf(mod),
     }));
 
@@ -214,15 +202,7 @@ export const getCourseModule = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// Markerer et modul som gennemført for den indloggede bruger.
-// Bruges fra CourseView når kunden trykker "Næste" på et bekræftet trin.
-// Upserter UserProgress og bruger $addToSet for idempotens — gentagne kald
-// for samme modul ændrer ikke noget. Returnerer den friske progress-info
-// så frontenden kan opdatere "X% gennemført".
-export const completeCourseModule = async (
-  req: AuthRequest,
-  res: Response,
-) => {
+export const completeCourseModule = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user!.userId;
     const id = req.params.id as string;
@@ -236,8 +216,6 @@ export const completeCourseModule = async (
       return res.status(403).json({ message: "Forbidden" });
     }
 
-    // Tjek at modulet rent faktisk hører til kurset — ellers kan en kunde
-    // sende et hvilket som helst moduleId og opfinde "completed" rækker.
     const moduleExists = await Module.exists({ _id: moduleId, courseId: id });
     if (!moduleExists) {
       return res.status(404).json({ message: "Module not found" });

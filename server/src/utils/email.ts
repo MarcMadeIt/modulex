@@ -1,37 +1,27 @@
 import nodemailer from "nodemailer";
 
-// Genbrugelig SMTP-transporter konfigureret fra .env.
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
   port: Number(process.env.SMTP_PORT) || 587,
-  secure: false, // 587 bruger STARTTLS
+  secure: false,
   auth: {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
   },
 });
 
-// Linket til spørgeskemaet bygges fra CLIENT_URL (samme mønster som CORS i server.ts).
-// Modtagerens email sendes med som query-param, så survey-formen kan forudfylde
-// (og låse) email-feltet — brugeren skal ikke skrive den selv.
 export function getSurveyUrl(email?: string): string {
   const base = process.env.CLIENT_URL || "http://localhost:5173";
   const url = `${base}/survey`;
   return email ? `${url}?email=${encodeURIComponent(email)}` : url;
 }
 
-// Linket til oprettelse af adgangskode (/signup). Email sendes med som query-param,
-// så signup-formen forudfylder og låser email-feltet — kunden skal kun vælge password.
 export function getSignupUrl(email?: string): string {
   const base = process.env.CLIENT_URL || "http://localhost:5173";
   const url = `${base}/signup`;
   return email ? `${url}?email=${encodeURIComponent(email)}` : url;
 }
 
-/**
- * Sender spørgeskema-mailen ("Kære kunde ... udfyld på link") til én modtager.
- * Kaster hvis afsendelsen fejler, så kalderen kan rapportere det pr. mail.
- */
 export async function sendSurveyEmail(to: string): Promise<void> {
   const surveyUrl = getSurveyUrl(to);
   const fromName = process.env.MAIL_FROM_NAME || "Modulex Billund Academy";
@@ -89,12 +79,6 @@ export async function sendSurveyEmail(to: string): Promise<void> {
   });
 }
 
-/**
- * Sender registrerings-mailen ("Dit kursus er klar – opret din adgangskode") til kunden,
- * når en admin har aktiveret dem. Linket peger på /signup?email=... så email-feltet
- * forudfyldes/låses og kunden kun skal vælge et password.
- * Kaster hvis afsendelsen fejler, så kalderen kan rapportere det.
- */
 export async function sendRegistrationEmail(to: string): Promise<void> {
   const signupUrl = getSignupUrl(to);
   const fromName = process.env.MAIL_FROM_NAME || "Modulex Billund Academy";

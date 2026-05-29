@@ -7,16 +7,12 @@ export const submitSurvey = async (req: Request, res: Response) => {
     const { email, companyName, contactPerson, phone, answers } = req.body;
 
     if (!email || typeof email !== "string") {
-      return res
-        .status(400)
-        .json({ error: { message: "Email is required" } });
+      return res.status(400).json({ error: { message: "Email is required" } });
     }
 
     const cleanEmail = email.trim().toLowerCase();
     const existing = await User.findOne({ email: cleanEmail });
 
-    // Hvis kunden allerede er aktiveret (har valgt password) skal de ikke
-    // kunne overskrive deres profil via survey-formularen.
     if (
       existing &&
       existing.status !== "pending_survey" &&
@@ -27,10 +23,6 @@ export const submitSurvey = async (req: Request, res: Response) => {
       });
     }
 
-    // Lead-flow: admin har sendt survey-mail -> bruger findes med pending_survey.
-    // Vi opdaterer det eksisterende record i stedet for at oprette en duplikat.
-    // pending_approval = bruger besvarer surveyen igen før admin har tildelt
-    // kurser -> tillad opdatering så de kan rette deres svar.
     const user =
       existing ??
       (await User.create({
@@ -49,7 +41,6 @@ export const submitSurvey = async (req: Request, res: Response) => {
       await user.save();
     }
 
-    // Convert answers map to array format expected by the schema.
     const answerList: IAnswer[] = Object.entries(answers ?? {}).map(
       ([questionId, answer]) => ({
         questionId,
@@ -58,7 +49,6 @@ export const submitSurvey = async (req: Request, res: Response) => {
     );
 
     try {
-      // Upsert: hvis brugeren genindsender surveyen erstattes svarene.
       await SurveyResponse.findOneAndUpdate(
         { userId: user._id },
         {
@@ -74,8 +64,6 @@ export const submitSurvey = async (req: Request, res: Response) => {
         },
       );
     } catch (err) {
-      // Hvis brugeren ikke fandtes i forvejen og survey-write fejler,
-      // ryd det halve user-record op igen så vi ikke efterlader skrald.
       if (!existing) {
         await User.deleteOne({ _id: user._id });
       }

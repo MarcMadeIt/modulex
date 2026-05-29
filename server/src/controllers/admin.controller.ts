@@ -15,8 +15,6 @@ export const getCustomers = async (req: AuthRequest, res: Response) => {
       .select("-password")
       .lean();
 
-    // Tæl kursustildelinger pr. bruger så frontenden kan vise
-    // "Tildel kurser" vs "Gensend kursus" uden N+1 requests.
     const counts = await UserCourse.aggregate<{
       _id: Types.ObjectId;
       count: number;
@@ -48,14 +46,10 @@ export const getAdminCourses = async (req: AuthRequest, res: Response) => {
   try {
     const courses = await Course.find().sort({ createdAt: -1 }).lean();
 
-    // Tilføj modulCount så kursusoversigten kan vise "X lektioner"
-    // uden et ekstra request pr. kursus.
     const moduleCounts = await Module.aggregate<{
       _id: Types.ObjectId;
       count: number;
-    }>([
-      { $group: { _id: "$courseId", count: { $sum: 1 } } },
-    ]);
+    }>([{ $group: { _id: "$courseId", count: { $sum: 1 } } }]);
 
     const countByCourseId = new Map(
       moduleCounts.map((entry) => [String(entry._id), entry.count]),
@@ -72,8 +66,6 @@ export const getAdminCourses = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// Returnerer alle kunder der har et specifikt kursus tildelt.
-// Bruges af AdminCourseAssignmentsModal til at vise modtagere pr. kursus.
 export const getCourseCustomers = async (req: AuthRequest, res: Response) => {
   try {
     const id = req.params.id as string;
@@ -128,13 +120,15 @@ type IncomingModule = {
   materials?: IncomingMaterial[];
 };
 
-// Mapper materials fra create-flowet til Module-schemaets enum.
-// Frontenden bruger "video" som UI-label, men schemaet kender kun "youtube".
 function normalizeMaterial(raw: IncomingMaterial) {
   const rawType = (raw?.type || "").toLowerCase();
   const type = rawType === "video" ? "youtube" : rawType;
 
-  if (!ALLOWED_MATERIAL_TYPES.includes(type as (typeof ALLOWED_MATERIAL_TYPES)[number])) {
+  if (
+    !ALLOWED_MATERIAL_TYPES.includes(
+      type as (typeof ALLOWED_MATERIAL_TYPES)[number],
+    )
+  ) {
     return null;
   }
 
@@ -149,7 +143,8 @@ function normalizeMaterial(raw: IncomingMaterial) {
     url: typeof raw.url === "string" ? raw.url.trim() : undefined,
     content: typeof raw.content === "string" ? raw.content : undefined,
     expectedDuration:
-      typeof raw.expectedDuration === "number" && Number.isFinite(raw.expectedDuration)
+      typeof raw.expectedDuration === "number" &&
+      Number.isFinite(raw.expectedDuration)
         ? raw.expectedDuration
         : undefined,
     contentId,
@@ -172,9 +167,6 @@ export const createCourse = async (req: AuthRequest, res: Response) => {
 
     const course = await Course.create({ title, description });
 
-    // Opretter moduler i samme request — atomisk nok til at vi kan rulle
-    // kurset tilbage hvis et modul fejler, så vi ikke efterlader et halvt
-    // oprettet kursus.
     if (Array.isArray(modules) && modules.length > 0) {
       try {
         const docs = modules.map((mod, index) => {
@@ -199,9 +191,9 @@ export const createCourse = async (req: AuthRequest, res: Response) => {
         await Module.insertMany(docs, { ordered: true });
       } catch (err) {
         await Course.findByIdAndDelete(course._id);
-        return res
-          .status(400)
-          .json({ message: "Invalid module data — kurset blev ikke oprettet." });
+        return res.status(400).json({
+          message: "Invalid module data — kurset blev ikke oprettet.",
+        });
       }
     }
 
@@ -284,7 +276,14 @@ export const createModule = async (req: AuthRequest, res: Response) => {
     if (!title || order === undefined) {
       return res.status(400).json({ message: "Title and order are required" });
     }
-    const mod = await Module.create({ courseId: id, title, description, order, duration, materials });
+    const mod = await Module.create({
+      courseId: id,
+      title,
+      description,
+      order,
+      duration,
+      materials,
+    });
     return res.status(201).json({ module: mod });
   } catch {
     return res.status(500).json({ message: "Failed to create module" });
@@ -333,7 +332,9 @@ export const assignCourse = async (req: AuthRequest, res: Response) => {
   try {
     const { userId, courseId } = req.body;
     if (!userId || !courseId) {
-      return res.status(400).json({ message: "userId and courseId are required" });
+      return res
+        .status(400)
+        .json({ message: "userId and courseId are required" });
     }
     if (!Types.ObjectId.isValid(userId) || !Types.ObjectId.isValid(courseId)) {
       return res.status(400).json({ message: "Invalid userId or courseId" });
@@ -356,14 +357,14 @@ export const assignCourse = async (req: AuthRequest, res: Response) => {
     return res.status(201).json({ grant });
   } catch (err: any) {
     if (err.code === 11000) {
-      return res.status(409).json({ message: "User already has access to this course" });
+      return res
+        .status(409)
+        .json({ message: "User already has access to this course" });
     }
     return res.status(500).json({ message: "Failed to assign course" });
   }
 };
 
-// Sletter en kunde/lead inkl. tilhørende kursustildelinger,
-// survey-svar og fremgangsdata. Bruges fra admin-dashboardets sletknap.
 export const deleteCustomer = async (req: AuthRequest, res: Response) => {
   try {
     const id = req.params.id as string;
@@ -406,14 +407,6 @@ export const getCustomerById = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// Opretter en lead-user med status "pending_survey" og sender survey-mailen.
-// Bruges af admin når en email manuelt tilføjes eller uploades.
-// De resterende felter (companyName, contactPerson, phone) er tomme og
-// bliver udfyldt når leadet besvarer surveyen.
-//
-// Mailen sendes FØR userens status sættes, så en SMTP-fejl ikke efterlader
-// et lead i systemet uden mail. Ved 409 (allerede oprettet) gen-sender vi
-// alligevel mailen, så admin kan re-trigge for kunder der har mistet linket.
 export const createLead = async (req: AuthRequest, res: Response) => {
   try {
     const { email } = req.body;
@@ -426,11 +419,7 @@ export const createLead = async (req: AuthRequest, res: Response) => {
 
     const existing = await User.findOne({ email: cleanEmail });
     if (existing && existing.status !== "pending_survey") {
-      // Hvis kunden allerede har besvaret surveyen eller er aktiveret,
-      // giver det ikke mening at sende survey-mailen igen.
-      return res
-        .status(409)
-        .json({ message: "Email is already registered" });
+      return res.status(409).json({ message: "Email is already registered" });
     }
 
     try {
@@ -438,8 +427,7 @@ export const createLead = async (req: AuthRequest, res: Response) => {
     } catch (err) {
       console.error(`Failed to send survey email to ${cleanEmail}:`, err);
       return res.status(502).json({
-        message:
-          "Kunne ikke sende survey-mail. Tjek SMTP-opsætningen i .env.",
+        message: "Kunne ikke sende survey-mail. Tjek SMTP-opsætningen i .env.",
       });
     }
 
@@ -467,7 +455,6 @@ export const createLead = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// Henter alle kursustildelinger for en specifik kunde inkl. fremgangsdata.
 export const getCustomerCourses = async (req: AuthRequest, res: Response) => {
   try {
     const id = req.params.id as string;
@@ -490,7 +477,9 @@ export const getCustomerCourses = async (req: AuthRequest, res: Response) => {
       return res.status(200).json({ assignments: [] });
     }
 
-    const courseIds = grants.map((g) => (g.courseId as any)?._id).filter(Boolean);
+    const courseIds = grants
+      .map((g) => (g.courseId as any)?._id)
+      .filter(Boolean);
 
     const [moduleCounts, progressRecords] = await Promise.all([
       Module.aggregate<{ _id: Types.ObjectId; count: number }>([
@@ -504,7 +493,10 @@ export const getCustomerCourses = async (req: AuthRequest, res: Response) => {
       moduleCounts.map((entry) => [String(entry._id), entry.count]),
     );
     const progressByCourseId = new Map(
-      progressRecords.map((p) => [String(p.courseId), p.completedModuleIds.length]),
+      progressRecords.map((p) => [
+        String(p.courseId),
+        p.completedModuleIds.length,
+      ]),
     );
 
     const assignments = grants
@@ -522,7 +514,10 @@ export const getCustomerCourses = async (req: AuthRequest, res: Response) => {
           grantedAt: grant.grantedAt,
           completedModules,
           totalModules,
-          percentage: totalModules > 0 ? Math.round((completedModules / totalModules) * 100) : 0,
+          percentage:
+            totalModules > 0
+              ? Math.round((completedModules / totalModules) * 100)
+              : 0,
         };
       })
       .filter(Boolean);
@@ -535,8 +530,6 @@ export const getCustomerCourses = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// Fjerner en kursustildeling fra en kunde.
-// Bruges når admin redigerer kursusvalg i "Tildel kurser"-modalen.
 export const unassignCourse = async (req: AuthRequest, res: Response) => {
   try {
     const id = req.params.id as string;
@@ -557,16 +550,10 @@ export const unassignCourse = async (req: AuthRequest, res: Response) => {
 
     return res.status(200).json({ message: "Assignment removed" });
   } catch {
-    return res
-      .status(500)
-      .json({ message: "Failed to remove assignment" });
+    return res.status(500).json({ message: "Failed to remove assignment" });
   }
 };
 
-// Sender registrerings-mail (signup-link) til kunden.
-// Bruges både ved "Tildel kurser" (første afsendelse) og "Gensend kursus".
-// Hvis kunden var pending_approval rykkes status til pending_activation
-// efter mailen er sendt — så den næste handling i UI'et er konsistent.
 export const resendCourses = async (req: AuthRequest, res: Response) => {
   try {
     const id = req.params.id as string;
@@ -590,13 +577,9 @@ export const resendCourses = async (req: AuthRequest, res: Response) => {
     try {
       await sendRegistrationEmail(user.email);
     } catch (err) {
-      console.error(
-        `Failed to send registration email to ${user.email}:`,
-        err,
-      );
+      console.error(`Failed to send registration email to ${user.email}:`, err);
       return res.status(502).json({
-        message:
-          "Kunne ikke sende kursusmail. Tjek SMTP-opsætningen i .env.",
+        message: "Kunne ikke sende kursusmail. Tjek SMTP-opsætningen i .env.",
       });
     }
 

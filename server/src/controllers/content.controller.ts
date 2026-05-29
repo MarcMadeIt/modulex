@@ -17,7 +17,6 @@ const EDITABLE_FIELDS = [
   "category",
 ] as const;
 
-// Whitelist incoming body fields to prevent mass-assignment (e.g. uploadedBy).
 const pickFields = (body: Record<string, unknown>) => {
   const out: Record<string, unknown> = {};
   for (const key of EDITABLE_FIELDS) {
@@ -203,7 +202,8 @@ export const resyncModuleMaterials = async (
     let modulesUpdated = 0;
 
     for (const content of contents) {
-      const materialType = content.type === "youtube" ? "youtube" : content.type;
+      const materialType =
+        content.type === "youtube" ? "youtube" : content.type;
       const matchableTypes =
         materialType === "youtube" ? ["youtube", "video"] : [materialType];
 
@@ -244,8 +244,6 @@ export const resyncModuleMaterials = async (
     });
   } catch (err) {
     console.error("Backfill error:", err);
-    return res
-      .status(500)
-      .json({ message: "Kunne ikke backfille contentId" });
+    return res.status(500).json({ message: "Kunne ikke backfille contentId" });
   }
 };

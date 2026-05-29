@@ -10,7 +10,6 @@ import cookieParser from "cookie-parser";
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// CORS - skal stå FØR routes
 app.use(
   cors({
     origin: process.env.CLIENT_URL || "http://localhost:5173",
@@ -20,7 +19,6 @@ app.use(
 app.use(express.json());
 app.use(cookieParser());
 
-// Swagger docs
 app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 app.get("/", (req: Request, res: Response) => {
@@ -29,7 +27,6 @@ app.get("/", (req: Request, res: Response) => {
 
 app.use(router);
 
-// Connect to MongoDB and start server
 async function start() {
   const uri = process.env.MONGODB_URI;
 
